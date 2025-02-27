@@ -340,9 +340,8 @@ export default function AppPage() {
               animate={{ rotate: 360 }}
               transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
             />
-            <h1 className="text-lg font-bold tracking-tight"></h1>
+            <h1 className="text-lg font-bold tracking-tight">NEAW</h1>
           </div>
-
           <div className="flex items-center space-x-2 md:space-x-6">
             <div className="hidden md:flex space-x-6">
               <motion.button
