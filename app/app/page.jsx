@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { Metaplex, walletAdapterIdentity } from '@metaplex-foundation/js';
-import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
+import { Connection, PublicKey } from '@solana/web3.js';
 
 export default function AppPage() {
   const [repos, setRepos] = useState([]);
@@ -117,17 +117,48 @@ export default function AppPage() {
   };
 
   const mintNFT = async (repo, walletKey) => {
-    setProcessingMint({ step: 1, message: 'Preparing metadata...' });
+    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+    const { solana } = window;
+    if (!solana?.isPhantom) throw new Error('Phantom wallet not found');
 
-    try {
-      const response = await axios.post('/api/mint', {
-        repo,
-        wallet: walletKey.toString(),
-      });
-      return response.data;
-    } catch (error) {
-      throw new Error(`NFT minting failed: ${error.response?.data?.error || error.message}`);
-    }
+    // Step 1: Prepare metadata and upload to IPFS
+    setProcessingMint({ step: 1, message: 'Preparing metadata...' });
+    const response = await axios.post('/api/mint', {
+      repo,
+      wallet: walletKey.toString(),
+    });
+    const { uri } = response.data;
+
+    // Step 2: Mint NFT using Metaplex
+    setProcessingMint({ step: 2, message: 'Minting NFT...' });
+    const metaplex = Metaplex.make(connection).use(walletAdapterIdentity(solana));
+    const { nft } = await metaplex.nfts().create({
+      uri,
+      name: repo.name || 'Untitled',
+      sellerFeeBasisPoints: 500,
+    });
+
+    // Step 3: Prepare NFT data
+    const nftData = {
+      name: repo.name || 'Untitled',
+      uri,
+      creator: walletKey.toString(),
+      mint: nft.mintAddress.toString(),
+      owner: walletKey.toString(),
+      description: repo.description,
+      language: repo.language || 'None',
+      stars: repo.stargazers_count || 0,
+      forks: repo.forks_count || 0,
+      created_at: repo.created_at,
+      html_url: repo.html_url || '',
+      full_name: repo.full_name || '',
+    };
+
+    // Step 4: Save to database
+    setProcessingMint({ step: 3, message: 'Saving to database...' });
+    await axios.post('/api/nfts', nftData);
+
+    return nftData;
   };
 
   const handleMint = async (repo) => {
@@ -143,14 +174,13 @@ export default function AppPage() {
       if (!connectedWallet) throw new Error('No wallet connected');
 
       const nft = await mintNFT(repo, connectedWallet);
-      await axios.post('/api/nfts', nft);
 
       setPublicNFTs((prev) => [nft, ...prev]);
       setUserNFTs((prev) => [nft, ...prev]);
       showNotification(`Successfully minted ${repo.name} as an NFT!`, 'success');
     } catch (err) {
       setError(err.message);
-      showNotification('Minting failed. Please try again.', 'error');
+      showNotification('Minting failed: ' + err.message, 'error');
     } finally {
       setLoading(false);
       setMintingRepo(null);
@@ -220,7 +250,7 @@ export default function AppPage() {
       await connection.confirmTransaction(signature);
 
       setProcessingMint({ step: 4, message: 'Transferring NFT...' });
-      const metaplex = Metaplex.make(connection).use(walletAdapterIdentity({ publicKey: wallet }));
+      const metaplex = Metaplex.make(connection).use(walletAdapterIdentity(solana));
       await metaplex.nfts().transfer({
         nftOrSft: { mintAddress: new PublicKey(nft.mint) },
         toOwner: toPublicKey,
@@ -340,9 +370,9 @@ export default function AppPage() {
               animate={{ rotate: 360 }}
               transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
             />
-             <Link href="/" className="text-xl font-bold tracking-tight">
-  NEAW
-</Link>
+            <Link href="/" className="text-xl font-bold tracking-tight">
+              NEAW
+            </Link>
           </div>
           <div className="flex items-center space-x-2 md:space-x-6">
             <div className="hidden md:flex space-x-6">
@@ -877,7 +907,7 @@ export default function AppPage() {
                     >
                       <span className="text-white">2</span>
                     </div>
-                    <p className="ml-3">{processingMint.step === 2 ? 'Uploading to IPFS...' : 'IPFS upload complete'}</p>
+                    <p className="ml-3">{processingMint.step === 2 ? 'Minting NFT...' : 'NFT minted'}</p>
                   </div>
                   <div className="flex items-center">
                     <div
@@ -887,17 +917,7 @@ export default function AppPage() {
                     >
                       <span className="text-white">3</span>
                     </div>
-                    <p className="ml-3">{processingMint.step === 3 ? 'Minting NFT...' : 'NFT minted'}</p>
-                  </div>
-                  <div className="flex items-center">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        processingMint.step >= 4 ? 'bg-purple-600' : 'bg-gray-600'
-                      }`}
-                    >
-                      <span className="text-white">4</span>
-                    </div>
-                    <p className="ml-3">{processingMint.step === 4 ? 'Finalizing...' : 'Complete'}</p>
+                    <p className="ml-3">{processingMint.step === 3 ? 'Saving to database...' : 'Complete'}</p>
                   </div>
                 </div>
               </div>
