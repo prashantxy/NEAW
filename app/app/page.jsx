@@ -38,7 +38,7 @@ export default function AppPage() {
         try {
           const resp = await solana.connect({ onlyIfTrusted: true });
           if (resp.publicKey) {
-            const publicKey = new PublicKey(resp.publicKey); // Ensure PublicKey instance
+            const publicKey = new PublicKey(resp.publicKey.toString()); // Ensure it's a string before converting to PublicKey
             setWallet(publicKey);
             console.log('Initial wallet:', publicKey, publicKey instanceof PublicKey);
           }
@@ -99,11 +99,14 @@ export default function AppPage() {
       }
       const response = await solana.connect();
       console.log('Phantom response:', response);
-      console.log('Phantom publicKey:', response.publicKey, typeof response.publicKey);
       if (!response.publicKey) {
         throw new Error('Failed to retrieve public key from wallet');
       }
-      const publicKey = new PublicKey(response.publicKey); // Normalize to PublicKey
+      // Ensure we're working with a string representation first
+      const publicKeyString = response.publicKey.toString();
+      console.log('Phantom publicKey string:', publicKeyString);
+      
+      const publicKey = new PublicKey(publicKeyString);
       setWallet(publicKey);
       console.log('Wallet set to:', publicKey, publicKey instanceof PublicKey);
       showNotification('Wallet connected successfully!', 'success');
@@ -129,11 +132,26 @@ export default function AppPage() {
   };
 
   const mintNFT = async (repo, walletKey) => {
-    // Validate walletKey and convert to PublicKey if necessary
+    // Validate walletKey and ensure it's a valid PublicKey
     if (!walletKey) {
       throw new Error('No wallet key provided');
     }
-    const normalizedWalletKey = walletKey instanceof PublicKey ? walletKey : new PublicKey(walletKey);
+    
+    // Always convert to string first to ensure we can create a proper PublicKey
+    let walletKeyString;
+    
+    if (walletKey instanceof PublicKey) {
+      walletKeyString = walletKey.toString();
+    } else if (typeof walletKey === 'string') {
+      walletKeyString = walletKey;
+    } else if (walletKey.toString && typeof walletKey.toString === 'function') {
+      walletKeyString = walletKey.toString();
+    } else {
+      throw new Error('Invalid wallet key format');
+    }
+    
+    // Create a new PublicKey from the string
+    const normalizedWalletKey = new PublicKey(walletKeyString);
 
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
     const { solana } = window;
@@ -191,9 +209,25 @@ export default function AppPage() {
           throw new Error('Wallet connection failed or was canceled');
         }
       }
-      // Normalize to PublicKey if not already
-      const normalizedWallet = connectedWallet instanceof PublicKey ? connectedWallet : new PublicKey(connectedWallet);
-      console.log('Connected wallet:', normalizedWallet, normalizedWallet instanceof PublicKey);
+      
+      // Extra validation to ensure we have a valid wallet
+      if (!connectedWallet) {
+        throw new Error('No wallet is connected');
+      }
+      
+      // Ensure we have a proper PublicKey instance
+      let normalizedWallet;
+      if (connectedWallet instanceof PublicKey) {
+        normalizedWallet = connectedWallet;
+      } else if (typeof connectedWallet === 'string') {
+        normalizedWallet = new PublicKey(connectedWallet);
+      } else if (connectedWallet.toString && typeof connectedWallet.toString === 'function') {
+        normalizedWallet = new PublicKey(connectedWallet.toString());
+      } else {
+        throw new Error('Invalid wallet format');
+      }
+
+      console.log('Connected wallet for mint:', normalizedWallet, normalizedWallet instanceof PublicKey);
 
       const nft = await mintNFT(repo, normalizedWallet);
 
@@ -221,6 +255,16 @@ export default function AppPage() {
     setError(null);
     try {
       if (!wallet) throw new Error('Connect wallet first');
+      
+      // Ensure we have a valid wallet string
+      const walletString = wallet instanceof PublicKey 
+        ? wallet.toString() 
+        : (typeof wallet === 'string' ? wallet : null);
+        
+      if (!walletString) {
+        throw new Error('Invalid wallet format');
+      }
+      
       await axios.patch('/api/nfts', { mint, price: parsedPrice, for_sale: true });
 
       setPublicNFTs((prev) =>
@@ -250,7 +294,8 @@ export default function AppPage() {
 
       const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
       const fromPublicKey = new PublicKey(nft.owner);
-      const toPublicKey = wallet;
+      // Ensure wallet is a proper PublicKey
+      const toPublicKey = wallet instanceof PublicKey ? wallet : new PublicKey(wallet.toString());
 
       setProcessingMint({ step: 1, message: 'Initiating transaction...' });
 
@@ -278,13 +323,16 @@ export default function AppPage() {
         toOwner: toPublicKey,
       });
 
+      // Ensure we have a valid wallet string for the update
+      const walletString = toPublicKey.toString();
+      
       setProcessingMint({ step: 5, message: 'Updating database...' });
-      await axios.patch('/api/nfts', { mint: nft.mint, owner: wallet.toString(), for_sale: false });
+      await axios.patch('/api/nfts', { mint: nft.mint, owner: walletString, for_sale: false });
 
       setPublicNFTs((prev) =>
-        prev.map((n) => (n.mint === nft.mint ? { ...n, owner: wallet.toString(), for_sale: false, price: 0 } : n))
+        prev.map((n) => (n.mint === nft.mint ? { ...n, owner: walletString, for_sale: false, price: 0 } : n))
       );
-      setUserNFTs((prev) => [...prev, { ...nft, owner: wallet.toString(), for_sale: false, price: 0 }]);
+      setUserNFTs((prev) => [...prev, { ...nft, owner: walletString, for_sale: false, price: 0 }]);
 
       showNotification(`Successfully purchased ${nft.name}!`, 'success');
     } catch (err) {
@@ -317,8 +365,18 @@ export default function AppPage() {
     setError(null);
     try {
       const { data } = await axios.get('/api/nfts');
+      
+      // Make sure we have a valid wallet string for comparison
+      const walletString = wallet instanceof PublicKey 
+        ? wallet.toString() 
+        : (typeof wallet === 'string' ? wallet : null);
+        
+      if (!walletString) {
+        throw new Error('Invalid wallet format');
+      }
+      
       const ownedNFTs = Array.isArray(data)
-        ? data.filter((nft) => nft.owner === wallet.toString())
+        ? data.filter((nft) => nft.owner === walletString)
         : [];
       setUserNFTs(ownedNFTs);
     } catch (err) {
@@ -442,7 +500,10 @@ export default function AppPage() {
                 <div className="flex items-center space-x-2">
                   <div className="hidden md:flex items-center bg-gray-800 px-3 py-2 rounded-md">
                     <span className="inline-block w-3 h-3 bg-green-400 rounded-full mr-2"></span>
-                    <span className="text-sm font-medium">{wallet.toString().slice(0, 4)}...{wallet.toString().slice(-4)}</span>
+                    <span className="text-sm font-medium">
+                      {(wallet instanceof PublicKey ? wallet.toString() : wallet?.toString?.() || '').slice(0, 4)}...
+                      {(wallet instanceof PublicKey ? wallet.toString() : wallet?.toString?.() || '').slice(-4)}
+                    </span>
                   </div>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -559,7 +620,7 @@ export default function AppPage() {
                         strokeLinejoin="round"
                         strokeWidth="2"
                         d="M5 13l4 4L19 7"
-                      ></path>
+                      />
                     </svg>
                   )}
                   {notification.type === 'error' && (
@@ -575,7 +636,7 @@ export default function AppPage() {
                         strokeLinejoin="round"
                         strokeWidth="2"
                         d="M6 18L18 6M6 6l12 12"
-                      ></path>
+                      />
                     </svg>
                   )}
                   {notification.type === 'info' && (
@@ -591,7 +652,7 @@ export default function AppPage() {
                         strokeLinejoin="round"
                         strokeWidth="2"
                         d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      ></path>
+                      />
                     </svg>
                   )}
                   <p className="text-white">{notification.message}</p>
@@ -744,7 +805,7 @@ export default function AppPage() {
                           {nft.for_sale && (
                             <div className="mt-4">
                               <p className="text-purple-400 font-medium">{nft.price} SOL</p>
-                              {nft.owner !== wallet?.toString() && (
+                              {nft.owner !== (wallet instanceof PublicKey ? wallet.toString() : wallet?.toString?.() || '') && (
                                 <motion.button
                                   whileHover={{ scale: 1.05 }}
                                   whileTap={{ scale: 0.95 }}
