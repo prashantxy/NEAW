@@ -37,14 +37,18 @@ export default function AppPage() {
       if (solana?.isPhantom) {
         try {
           const resp = await solana.connect({ onlyIfTrusted: true });
-          if (resp.publicKey) {
-            const publicKey = new PublicKey(resp.publicKey.toString()); // Ensure it's a string before converting to PublicKey
+          if (resp && resp.publicKey) {
+            const publicKey = new PublicKey(resp.publicKey.toString());
             setWallet(publicKey);
             console.log('Initial wallet:', publicKey, publicKey instanceof PublicKey);
+          } else {
+            console.log('No publicKey in initial wallet response');
           }
         } catch (e) {
           console.log('No previous wallet connection found:', e);
         }
+      } else {
+        console.log('Phantom wallet not detected on page load');
       }
     };
 
@@ -99,10 +103,9 @@ export default function AppPage() {
       }
       const response = await solana.connect();
       console.log('Phantom response:', response);
-      if (!response.publicKey) {
+      if (!response || !response.publicKey) {
         throw new Error('Failed to retrieve public key from wallet');
       }
-      // Ensure we're working with a string representation first
       const publicKeyString = response.publicKey.toString();
       console.log('Phantom publicKey string:', publicKeyString);
       
@@ -132,26 +135,23 @@ export default function AppPage() {
   };
 
   const mintNFT = async (repo, walletKey) => {
-    // Validate walletKey and ensure it's a valid PublicKey
     if (!walletKey) {
       throw new Error('No wallet key provided');
     }
     
-    // Always convert to string first to ensure we can create a proper PublicKey
     let walletKeyString;
-    
     if (walletKey instanceof PublicKey) {
       walletKeyString = walletKey.toString();
     } else if (typeof walletKey === 'string') {
       walletKeyString = walletKey;
-    } else if (walletKey.toString && typeof walletKey.toString === 'function') {
+    } else if (walletKey && typeof walletKey.toString === 'function') {
       walletKeyString = walletKey.toString();
     } else {
       throw new Error('Invalid wallet key format');
     }
     
-    // Create a new PublicKey from the string
     const normalizedWalletKey = new PublicKey(walletKeyString);
+    console.log('Minting with wallet:', normalizedWalletKey.toString());
 
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
     const { solana } = window;
@@ -210,24 +210,22 @@ export default function AppPage() {
         }
       }
       
-      // Extra validation to ensure we have a valid wallet
       if (!connectedWallet) {
         throw new Error('No wallet is connected');
       }
       
-      // Ensure we have a proper PublicKey instance
       let normalizedWallet;
       if (connectedWallet instanceof PublicKey) {
         normalizedWallet = connectedWallet;
       } else if (typeof connectedWallet === 'string') {
         normalizedWallet = new PublicKey(connectedWallet);
-      } else if (connectedWallet.toString && typeof connectedWallet.toString === 'function') {
+      } else if (connectedWallet && typeof connectedWallet.toString === 'function') {
         normalizedWallet = new PublicKey(connectedWallet.toString());
       } else {
         throw new Error('Invalid wallet format');
       }
 
-      console.log('Connected wallet for mint:', normalizedWallet, normalizedWallet instanceof PublicKey);
+      console.log('Connected wallet for mint:', normalizedWallet.toString(), normalizedWallet instanceof PublicKey);
 
       const nft = await mintNFT(repo, normalizedWallet);
 
@@ -256,14 +254,14 @@ export default function AppPage() {
     try {
       if (!wallet) throw new Error('Connect wallet first');
       
-      // Ensure we have a valid wallet string
       const walletString = wallet instanceof PublicKey 
         ? wallet.toString() 
-        : (typeof wallet === 'string' ? wallet : null);
+        : (wallet && typeof wallet.toString === 'function' ? wallet.toString() : null);
         
       if (!walletString) {
         throw new Error('Invalid wallet format');
       }
+      console.log('Listing with wallet:', walletString);
       
       await axios.patch('/api/nfts', { mint, price: parsedPrice, for_sale: true });
 
@@ -292,10 +290,17 @@ export default function AppPage() {
     try {
       if (!wallet) throw new Error('Connect wallet first');
 
+      const walletString = wallet instanceof PublicKey 
+        ? wallet.toString() 
+        : (wallet && typeof wallet.toString === 'function' ? wallet.toString() : null);
+      if (!walletString) {
+        throw new Error('Invalid wallet format');
+      }
+      const toPublicKey = new PublicKey(walletString);
+      console.log('Buying with wallet:', walletString);
+
       const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
       const fromPublicKey = new PublicKey(nft.owner);
-      // Ensure wallet is a proper PublicKey
-      const toPublicKey = wallet instanceof PublicKey ? wallet : new PublicKey(wallet.toString());
 
       setProcessingMint({ step: 1, message: 'Initiating transaction...' });
 
@@ -323,9 +328,6 @@ export default function AppPage() {
         toOwner: toPublicKey,
       });
 
-      // Ensure we have a valid wallet string for the update
-      const walletString = toPublicKey.toString();
-      
       setProcessingMint({ step: 5, message: 'Updating database...' });
       await axios.patch('/api/nfts', { mint: nft.mint, owner: walletString, for_sale: false });
 
@@ -364,17 +366,15 @@ export default function AppPage() {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await axios.get('/api/nfts');
-      
-      // Make sure we have a valid wallet string for comparison
       const walletString = wallet instanceof PublicKey 
         ? wallet.toString() 
-        : (typeof wallet === 'string' ? wallet : null);
-        
+        : (wallet && typeof wallet.toString === 'function' ? wallet.toString() : null);
       if (!walletString) {
         throw new Error('Invalid wallet format');
       }
-      
+      console.log('Fetching user NFTs with wallet:', walletString);
+
+      const { data } = await axios.get('/api/nfts');
       const ownedNFTs = Array.isArray(data)
         ? data.filter((nft) => nft.owner === walletString)
         : [];
