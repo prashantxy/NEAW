@@ -213,7 +213,7 @@ export default function LandingPage() {
                       <span className="flex items-center">
                         <span className="mr-1">★</span> 328
                       </span>
-                      <span className="mx-2">•</span>
+                      <span className="mx-2">P_19</span>
                       <span>Updated 2 days ago</span>
                     </div>
                   </div>
