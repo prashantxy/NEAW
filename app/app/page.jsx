@@ -8,7 +8,7 @@ import { Connection, PublicKey, SystemProgram, Transaction } from '@solana/web3.
 
 export default function AppPage() {
   const [repos, setRepos] = useState([]);
-  const [wallet, setWallet] = useState(null);
+  const [wallet, setWallet] = useState(null); // Will store PublicKey instance
   const [publicNFTs, setPublicNFTs] = useState([]);
   const [userNFTs, setUserNFTs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -37,7 +37,11 @@ export default function AppPage() {
       if (solana?.isPhantom) {
         try {
           const resp = await solana.connect({ onlyIfTrusted: true });
-          if (resp.publicKey) setWallet(resp.publicKey);
+          if (resp.publicKey) {
+            const publicKey = new PublicKey(resp.publicKey); // Ensure PublicKey instance
+            setWallet(publicKey);
+            console.log('Initial wallet:', publicKey, publicKey instanceof PublicKey);
+          }
         } catch (e) {
           console.log('No previous wallet connection found:', e);
         }
@@ -94,11 +98,14 @@ export default function AppPage() {
         throw new Error('Phantom wallet not found. Please install Phantom.');
       }
       const response = await solana.connect();
+      console.log('Phantom response:', response);
+      console.log('Phantom publicKey:', response.publicKey, typeof response.publicKey);
       if (!response.publicKey) {
         throw new Error('Failed to retrieve public key from wallet');
       }
-      const publicKey = response.publicKey;
+      const publicKey = new PublicKey(response.publicKey); // Normalize to PublicKey
       setWallet(publicKey);
+      console.log('Wallet set to:', publicKey, publicKey instanceof PublicKey);
       showNotification('Wallet connected successfully!', 'success');
       setShowConnectModal(false);
       return publicKey;
@@ -122,9 +129,11 @@ export default function AppPage() {
   };
 
   const mintNFT = async (repo, walletKey) => {
-    if (!walletKey || !(walletKey instanceof PublicKey)) {
-      throw new Error('Invalid wallet key provided');
+    // Validate walletKey and convert to PublicKey if necessary
+    if (!walletKey) {
+      throw new Error('No wallet key provided');
     }
+    const normalizedWalletKey = walletKey instanceof PublicKey ? walletKey : new PublicKey(walletKey);
 
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
     const { solana } = window;
@@ -133,7 +142,7 @@ export default function AppPage() {
     setProcessingMint({ step: 1, message: 'Preparing metadata...' });
     const response = await axios.post('/api/mint', {
       repo,
-      wallet: walletKey.toString(),
+      wallet: normalizedWalletKey.toString(),
     });
     const { uri } = response.data;
 
@@ -148,9 +157,9 @@ export default function AppPage() {
     const nftData = {
       name: repo.name || 'Untitled',
       uri,
-      creator: walletKey.toString(),
+      creator: normalizedWalletKey.toString(),
       mint: nft.mintAddress.toString(),
-      owner: walletKey.toString(),
+      owner: normalizedWalletKey.toString(),
       description: repo.description,
       language: repo.language || 'None',
       stars: repo.stargazers_count || 0,
@@ -182,11 +191,11 @@ export default function AppPage() {
           throw new Error('Wallet connection failed or was canceled');
         }
       }
-      if (!(connectedWallet instanceof PublicKey)) {
-        throw new Error('Invalid wallet key');
-      }
+      // Normalize to PublicKey if not already
+      const normalizedWallet = connectedWallet instanceof PublicKey ? connectedWallet : new PublicKey(connectedWallet);
+      console.log('Connected wallet:', normalizedWallet, normalizedWallet instanceof PublicKey);
 
-      const nft = await mintNFT(repo, connectedWallet);
+      const nft = await mintNFT(repo, normalizedWallet);
 
       setPublicNFTs((prev) => [nft, ...prev]);
       setUserNFTs((prev) => [nft, ...prev]);
