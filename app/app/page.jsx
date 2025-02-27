@@ -1010,4 +1010,4 @@ export default function AppPage() {
       </div>
     </motion.div>
   );
-}
+} 
