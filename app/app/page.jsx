@@ -126,8 +126,21 @@ export default function AppPage() {
 
   const disconnectWallet = () => {
     const { solana } = window;
+    console.log('Attempting to disconnect wallet. Current wallet:', wallet);
     if (solana?.isPhantom) {
-      solana.disconnect();
+      try {
+        solana.disconnect();
+        setWallet(null);
+        setUserNFTs([]); // Clear user NFTs to prevent stale data
+        showNotification('Wallet disconnected', 'info');
+        console.log('Wallet disconnected successfully');
+      } catch (err) {
+        console.log('Error during wallet disconnection:', err);
+        setError('Failed to disconnect wallet: ' + err.message);
+        showNotification('Failed to disconnect wallet', 'error');
+      }
+    } else {
+      console.log('Phantom wallet not available for disconnection');
       setWallet(null);
       setUserNFTs([]);
       showNotification('Wallet disconnected', 'info');
@@ -501,8 +514,7 @@ export default function AppPage() {
                   <div className="hidden md:flex items-center bg-gray-800 px-3 py-2 rounded-md">
                     <span className="inline-block w-3 h-3 bg-green-400 rounded-full mr-2"></span>
                     <span className="text-sm font-medium">
-                      {(wallet instanceof PublicKey ? wallet.toString() : wallet?.toString?.() || '').slice(0, 4)}...
-                      {(wallet instanceof PublicKey ? wallet.toString() : wallet?.toString?.() || '').slice(-4)}
+                      {wallet && typeof wallet.toString === 'function' ? wallet.toString().slice(0, 4) + '...' + wallet.toString().slice(-4) : 'No wallet'}
                     </span>
                   </div>
                   <motion.button
@@ -805,7 +817,7 @@ export default function AppPage() {
                           {nft.for_sale && (
                             <div className="mt-4">
                               <p className="text-purple-400 font-medium">{nft.price} SOL</p>
-                              {nft.owner !== (wallet instanceof PublicKey ? wallet.toString() : wallet?.toString?.() || '') && (
+                              {nft.owner !== (wallet && typeof wallet.toString === 'function' ? wallet.toString() : '') && (
                                 <motion.button
                                   whileHover={{ scale: 1.05 }}
                                   whileTap={{ scale: 0.95 }}
