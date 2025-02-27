@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { Metaplex, walletAdapterIdentity } from '@metaplex-foundation/js';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
 
 export default function AppPage() {
   const [repos, setRepos] = useState([]);
@@ -37,9 +37,9 @@ export default function AppPage() {
       if (solana?.isPhantom) {
         try {
           const resp = await solana.connect({ onlyIfTrusted: true });
-          setWallet(resp.publicKey);
+          if (resp.publicKey) setWallet(resp.publicKey);
         } catch (e) {
-          console.log('No previous wallet connection found');
+          console.log('No previous wallet connection found:', e);
         }
       }
     };
@@ -90,17 +90,22 @@ export default function AppPage() {
     setError(null);
     try {
       const { solana } = window;
-      if (!solana?.isPhantom) throw new Error('Phantom wallet not found');
+      if (!solana?.isPhantom) {
+        throw new Error('Phantom wallet not found. Please install Phantom.');
+      }
       const response = await solana.connect();
-      if (!response.publicKey) throw new Error('No public key received');
-      setWallet(response.publicKey);
+      if (!response.publicKey) {
+        throw new Error('Failed to retrieve public key from wallet');
+      }
+      const publicKey = response.publicKey;
+      setWallet(publicKey);
       showNotification('Wallet connected successfully!', 'success');
       setShowConnectModal(false);
-      return response.publicKey;
+      return publicKey;
     } catch (err) {
       setError('Wallet connection failed: ' + err.message);
-      showNotification('Wallet connection failed. Is Phantom installed?', 'error');
-      return null;
+      showNotification('Wallet connection failed: ' + err.message, 'error');
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -117,11 +122,14 @@ export default function AppPage() {
   };
 
   const mintNFT = async (repo, walletKey) => {
+    if (!walletKey || !(walletKey instanceof PublicKey)) {
+      throw new Error('Invalid wallet key provided');
+    }
+
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
     const { solana } = window;
     if (!solana?.isPhantom) throw new Error('Phantom wallet not found');
 
-    // Step 1: Prepare metadata and upload to IPFS
     setProcessingMint({ step: 1, message: 'Preparing metadata...' });
     const response = await axios.post('/api/mint', {
       repo,
@@ -129,7 +137,6 @@ export default function AppPage() {
     });
     const { uri } = response.data;
 
-    // Step 2: Mint NFT using Metaplex
     setProcessingMint({ step: 2, message: 'Minting NFT...' });
     const metaplex = Metaplex.make(connection).use(walletAdapterIdentity(solana));
     const { nft } = await metaplex.nfts().create({
@@ -138,7 +145,6 @@ export default function AppPage() {
       sellerFeeBasisPoints: 500,
     });
 
-    // Step 3: Prepare NFT data
     const nftData = {
       name: repo.name || 'Untitled',
       uri,
@@ -154,7 +160,6 @@ export default function AppPage() {
       full_name: repo.full_name || '',
     };
 
-    // Step 4: Save to database
     setProcessingMint({ step: 3, message: 'Saving to database...' });
     await axios.post('/api/nfts', nftData);
 
@@ -170,8 +175,16 @@ export default function AppPage() {
     setError(null);
 
     try {
-      const connectedWallet = wallet || (await connectWallet());
-      if (!connectedWallet) throw new Error('No wallet connected');
+      let connectedWallet = wallet;
+      if (!connectedWallet) {
+        connectedWallet = await connectWallet();
+        if (!connectedWallet) {
+          throw new Error('Wallet connection failed or was canceled');
+        }
+      }
+      if (!(connectedWallet instanceof PublicKey)) {
+        throw new Error('Invalid wallet key');
+      }
 
       const nft = await mintNFT(repo, connectedWallet);
 
@@ -267,7 +280,7 @@ export default function AppPage() {
       showNotification(`Successfully purchased ${nft.name}!`, 'success');
     } catch (err) {
       setError('Buying failed: ' + err.message);
-      showNotification('Purchase failed', 'error');
+      showNotification('Purchase failed: ' + err.message, 'error');
     } finally {
       setLoading(false);
       setProcessingMint(null);
