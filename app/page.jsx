@@ -132,7 +132,9 @@ export default function LandingPage() {
               animate={{ rotate: 360 }}
               transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
             />
-            <h1 className="text-xl font-bold tracking-tight">NEAW</h1>
+            <Link href="/" className="text-xl font-bold tracking-tight">
+  NEAW
+</Link>
           </div>
           <div className="hidden md:flex space-x-8">
             <a href="#features" className="hover:text-purple-400 transition-colors">Features</a>
