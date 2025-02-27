@@ -120,7 +120,7 @@ export default function AppPage() {
     const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
     const { solana } = window;
     if (!solana?.isPhantom) throw new Error('Phantom wallet not found');
-  
+
     // Step 1: Prepare metadata and upload to IPFS
     setProcessingMint({ step: 1, message: 'Preparing metadata...' });
     const response = await axios.post('/api/mint', {
@@ -128,25 +128,16 @@ export default function AppPage() {
       wallet: walletKey.toString(),
     });
     const { uri } = response.data;
-  
-    // Step 2: Fetch a fresh blockhash
+
+    // Step 2: Mint NFT using Metaplex
     setProcessingMint({ step: 2, message: 'Minting NFT...' });
     const metaplex = Metaplex.make(connection).use(walletAdapterIdentity(solana));
-    
-    // Get a recent blockhash
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
-  
-    // Mint the NFT with explicit blockhash
     const { nft } = await metaplex.nfts().create({
       uri,
       name: repo.name || 'Untitled',
       sellerFeeBasisPoints: 500,
-    }, {
-      commitment: 'confirmed',
-      // Pass the blockhash and durability options (optional, depending on Metaplex version)
-      // Note: Some Metaplex versions may not directly support these options here; see below for manual transaction handling if needed
     });
-  
+
     // Step 3: Prepare NFT data
     const nftData = {
       name: repo.name || 'Untitled',
@@ -162,12 +153,39 @@ export default function AppPage() {
       html_url: repo.html_url || '',
       full_name: repo.full_name || '',
     };
-  
+
     // Step 4: Save to database
     setProcessingMint({ step: 3, message: 'Saving to database...' });
     await axios.post('/api/nfts', nftData);
-  
+
     return nftData;
+  };
+
+  const handleMint = async (repo) => {
+    if (!repo?.id) return;
+
+    setMintingRepo(repo);
+    setSelectedRepo(repo);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const connectedWallet = wallet || (await connectWallet());
+      if (!connectedWallet) throw new Error('No wallet connected');
+
+      const nft = await mintNFT(repo, connectedWallet);
+
+      setPublicNFTs((prev) => [nft, ...prev]);
+      setUserNFTs((prev) => [nft, ...prev]);
+      showNotification(`Successfully minted ${repo.name} as an NFT!`, 'success');
+    } catch (err) {
+      setError(err.message);
+      showNotification('Minting failed: ' + err.message, 'error');
+    } finally {
+      setLoading(false);
+      setMintingRepo(null);
+      setProcessingMint(null);
+    }
   };
 
   const listForSale = async (mint, price) => {
