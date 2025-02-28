@@ -9,8 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ceramicnetwork/http-client": "^6.4.0",
     "@metaplex-foundation/js": "^0.19.0",
     "@pinata/sdk": "^2.1.0",
+    "@plurality-network/smart-profile-wallet": "^2.16.0",
     "@solana/spl-token": "^0.3.0",
     "@solana/web3.js": "^1.70.0",
     "@supabase/supabase-js": "^2.0.0",

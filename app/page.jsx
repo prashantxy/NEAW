@@ -5,27 +5,44 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { Connection, PublicKey } from '@solana/web3.js';
+import { initSmartProfile, getProfile } from '@/components/ui/lib/plurality';
 
 export default function LandingPage() {
   const router = useRouter();
   const [isLoaded, setIsLoaded] = useState(false);
   const [hoveredCard, setHoveredCard] = useState(null);
   const [wallet, setWallet] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [trendingRepos, setTrendingRepos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  const features = [
-    { id: 1, title: "Mint Repos", description: "Turn your GitHub repositories into valuable NFTs", icon: "📦" },
-    { id: 2, title: "List & Trade", description: "List your repo NFTs on our marketplace", icon: "💱" },
-    { id: 3, title: "Earn Royalties", description: "Get paid when others use your code", icon: "💰" },
-    { id: 4, title: "Verify Ownership", description: "Blockchain-verified ownership of your code", icon: "✅" },
-  ];
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [animationStyles, setAnimationStyles] = useState([]);
 
   useEffect(() => {
     setIsLoaded(true);
     fetchTrendingRepos();
     checkWalletConnection();
+
+    // Generate animation styles on client-side only
+    const styles = Array.from({ length: 20 }).map(() => ({
+      top: `${Math.random() * 100}%`,
+      left: `${Math.random() * 100}%`,
+      width: `${Math.random() * 100 + 50}px`,
+      height: `${Math.random() * 100 + 50}px`,
+      x: [0, Math.random() * 100 - 50],
+      y: [0, Math.random() * 100 - 50],
+      duration: Math.random() * 10 + 10,
+    }));
+    setAnimationStyles(styles);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) {
+      fetchGithubToken(code).then(() => {
+        window.history.pushState({}, document.title, '/');
+      });
+    }
   }, []);
 
   const checkWalletConnection = async () => {
@@ -33,7 +50,9 @@ export default function LandingPage() {
     if (solana?.isPhantom) {
       try {
         const resp = await solana.connect({ onlyIfTrusted: true });
+        const walletAddr = resp.publicKey.toString();
         setWallet(resp.publicKey);
+        await loadProfile(walletAddr);
       } catch (e) {
         console.log('No previous wallet connection found');
       }
@@ -48,13 +67,34 @@ export default function LandingPage() {
       if (!solana?.isPhantom) throw new Error('Phantom wallet not found');
       const response = await solana.connect();
       if (!response.publicKey) throw new Error('No public key received');
+      const walletAddr = response.publicKey.toString();
       setWallet(response.publicKey);
+      await loadProfile(walletAddr);
       router.push('/app');
     } catch (err) {
       setError('Wallet connection failed: ' + err.message);
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadProfile = async (walletAddress) => {
+    let userProfile = await getProfile(walletAddress);
+    if (!userProfile) {
+      const githubToken = await fetchGithubToken();
+      userProfile = await initSmartProfile(walletAddress, githubToken);
+    }
+    setProfile(userProfile);
+  };
+
+  const fetchGithubToken = async (code) => {
+    try {
+      const { data } = await axios.get(`/api/auth${code ? `?code=${code}` : ''}`, { withCredentials: true });
+      return data.accessToken || null;
+    } catch (error) {
+      console.error('Failed to fetch GitHub token:', error);
+      return null;
     }
   };
 
@@ -89,26 +129,33 @@ export default function LandingPage() {
     }
   };
 
+  const features = [
+    { id: 1, title: "Mint Repos", description: "Turn your GitHub repositories into valuable NFTs", icon: "📦" },
+    { id: 2, title: "List & Trade", description: "List your repo NFTs on our marketplace", icon: "💱" },
+    { id: 3, title: "Earn Royalties", description: "Get paid when others use your code", icon: "💰" },
+    { id: 4, title: "Verify Ownership", description: "Blockchain-verified ownership of your code", icon: "✅" },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-900 text-white overflow-hidden relative">
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute w-full h-full">
-          {Array.from({ length: 20 }).map((_, i) => (
+          {animationStyles.map((style, i) => (
             <motion.div
               key={i}
               className="absolute rounded-full bg-purple-500 opacity-10"
               style={{
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                width: `${Math.random() * 100 + 50}px`,
-                height: `${Math.random() * 100 + 50}px`,
+                top: style.top,
+                left: style.left,
+                width: style.width,
+                height: style.height,
               }}
               animate={{
-                x: [0, Math.random() * 100 - 50],
-                y: [0, Math.random() * 100 - 50],
+                x: style.x,
+                y: style.y,
               }}
               transition={{
-                duration: Math.random() * 10 + 10,
+                duration: style.duration,
                 repeat: Infinity,
                 repeatType: "reverse",
               }}
@@ -116,7 +163,6 @@ export default function LandingPage() {
           ))}
         </div>
       </div>
-
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
 
       <div className="relative z-10">
@@ -132,21 +178,67 @@ export default function LandingPage() {
               animate={{ rotate: 360 }}
               transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
             />
-            <Link href="/" className="text-xl font-bold tracking-tight">
-  NEAW
-</Link>
+            <Link href="/" className="text-xl font-bold tracking-tight">NEAW</Link>
           </div>
           <div className="hidden md:flex space-x-8">
             <a href="#features" className="hover:text-purple-400 transition-colors">Features</a>
             <a href="#trending" className="hover:text-purple-400 transition-colors">Trending Repos</a>
             <a href="#how-it-works" className="hover:text-purple-400 transition-colors">How It Works</a>
           </div>
-          <button 
-            className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 transition-colors"
-            onClick={connectWallet}
-          >
-            {wallet ? `Connected: ${wallet.toString().slice(0, 4)}...` : 'Connect Wallet'}
-          </button>
+          
+          <div className="relative">
+            {!wallet ? (
+              <button 
+                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 transition-colors"
+                onClick={connectWallet}
+                disabled={loading}
+              >
+                {loading ? 'Connecting...' : 'Connect Wallet'}
+              </button>
+            ) : (
+              <div>
+                <motion.button
+                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-md text-sm font-medium"
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {profile ? `${profile.connectedPlatforms?.github?.username || 'Profile'} (${wallet.toString().slice(0, 4)}...)` : 'Loading...'}
+                </motion.button>
+                <AnimatePresence>
+                  {isProfileOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute right-0 mt-2 w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-4 z-20"
+                    >
+                      <h3 className="text-lg font-bold mb-2">Smart Profile</h3>
+                      <p className="text-sm text-gray-400">
+                        <strong>Wallet:</strong> {wallet.toString().slice(0, 6)}...{wallet.toString().slice(-4)}
+                      </p>
+                      {profile?.connectedPlatforms?.github?.username && (
+                        <p className="text-sm text-gray-400">
+                          <strong>GitHub:</strong> {profile.connectedPlatforms.github.username}
+                        </p>
+                      )}
+                      <p className="text-sm text-gray-400">
+                        <strong>NFTs Minted:</strong> {profile?.extendedPrivateData?.nfts?.length || 0}
+                      </p>
+                      <motion.button
+                        className="mt-4 w-full px-4 py-2 bg-purple-600 rounded-md text-sm hover:bg-purple-700 transition-colors"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => router.push('/app')}
+                      >
+                        Go to App
+                      </motion.button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
         </motion.nav>
 
         <div className="flex flex-col md:flex-row justify-between items-center py-16 px-8 md:px-16 gap-8">
@@ -504,46 +596,11 @@ export default function LandingPage() {
             <div>
               <h4 className="text-lg font-semibold mb-4">Connect</h4>
               <ul>
-  <li>
-    <a
-      href="https://www.linkedin.com/in/prashant-dubey-59826521b/"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="hover:text-purple-400 transition-colors"
-    >
-      LinkedIn
-    </a>
-  </li>
-  <li>
-    <a
-      href="https://x.com/pdubey1924"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="hover:text-purple-400 transition-colors"
-    >
-      X (Twitter)
-    </a>
-  </li>
-  <li>
-    <a
-      href="https://discord.com/users/prashantdubey1924_55932"
-      target="_blank"
-      rel="noopener noreferrer"
-      className="hover:text-purple-400 transition-colors"
-    >
-      Discord
-    </a>
-  </li>
-  <li>
-    <a
-      href="mailto:pdubey1924@gmail.com"
-      className="hover:text-purple-400 transition-colors"
-    >
-      Email
-    </a>
-  </li>
-</ul>
-
+                <li><a href="https://www.linkedin.com/in/prashant-dubey-59826521b/" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors">LinkedIn</a></li>
+                <li><a href="https://x.com/pdubey1924" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors">X (Twitter)</a></li>
+                <li><a href="https://discord.com/users/prashantdubey1924_55932" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors">Discord</a></li>
+                <li><a href="mailto:pdubey1924@gmail.com" className="hover:text-purple-400 transition-colors">Email</a></li>
+              </ul>
             </div>
           </div>
           
