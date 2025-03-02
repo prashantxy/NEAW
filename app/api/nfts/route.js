@@ -36,10 +36,10 @@ export async function POST(req) {
 
     const { error } = await supabase.from('nfts').insert([nftData]);
     if (error) throw new Error(error.message);
-
+  
     return new Response(JSON.stringify({ success: true, data: nftData }), { status: 200 });
   } catch (error) {
-    console.error('NFT insertion error:', error);
+    console.error('NFT insertion error:', error); 
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 }

@@ -1,13 +1,10 @@
-// lib/plurality.js
+
 'use client';
 
-// Import Ceramic client (confirmed available on npm)
 import { CeramicClient } from '@ceramicnetwork/http-client';
 
-// Initialize Ceramic client
-const ceramic = new CeramicClient('https://ceramic.plurality.network'); // Check Plurality docs for exact URL
+const ceramic = new CeramicClient('https://ceramic.plurality.network'); 
 
-// Mock implementations until Plurality SDK is available
 export async function initSmartProfile(walletAddress, githubToken = null) {
   console.warn('Plurality SDK not available; using mock initSmartProfile');
   return {
