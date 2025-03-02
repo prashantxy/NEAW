@@ -18,6 +18,7 @@ export default function LandingPage() {
   const [error, setError] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [animationStyles, setAnimationStyles] = useState([]);
+  const [hoverButton, setHoverButton] = useState(false);
 
   useEffect(() => {
     setIsLoaded(true);
@@ -137,13 +138,13 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white overflow-hidden relative">
+    <div className="min-h-screen bg-black text-white overflow-hidden relative">
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute w-full h-full">
           {animationStyles.map((style, i) => (
             <motion.div
               key={i}
-              className="absolute rounded-full bg-purple-500 opacity-10"
+              className="absolute rounded-full bg-vercel-pink/5 opacity-10"
               style={{
                 top: style.top,
                 left: style.left,
@@ -163,7 +164,7 @@ export default function LandingPage() {
           ))}
         </div>
       </div>
-      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+      <div className="absolute inset-0 bg-grid-pattern"></div>
 
       <div className="relative z-10">
         <motion.nav 
@@ -174,31 +175,47 @@ export default function LandingPage() {
         >
           <div className="flex items-center">
             <motion.div
-              className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg mr-3"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            />
+              className="w-10 h-10 bg-black rounded-lg mr-3 flex items-center justify-center"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 19.5H22L12 2Z" fill="white"/>
+              </svg>
+            </motion.div>
             <Link href="/" className="text-xl font-bold tracking-tight">NEAW</Link>
           </div>
           <div className="hidden md:flex space-x-8">
-            <a href="#features" className="hover:text-purple-400 transition-colors">Features</a>
-            <a href="#trending" className="hover:text-purple-400 transition-colors">Trending Repos</a>
-            <a href="#how-it-works" className="hover:text-purple-400 transition-colors">How It Works</a>
+            <a href="#features" className="text-sm hover:text-white/70 transition-colors">Features</a>
+            <a href="#trending" className="text-sm hover:text-white/70 transition-colors">Trending Repos</a>
+            <a href="#how-it-works" className="text-sm hover:text-white/70 transition-colors">How It Works</a>
           </div>
           
           <div className="relative">
             {!wallet ? (
-              <button 
-                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 transition-colors"
+              <motion.button 
+                className="px-4 py-2 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors"
                 onClick={connectWallet}
                 disabled={loading}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onHoverStart={() => setHoverButton(true)}
+                onHoverEnd={() => setHoverButton(false)}
               >
                 {loading ? 'Connecting...' : 'Connect Wallet'}
-              </button>
+                {hoverButton && (
+                  <motion.span
+                    className="absolute inset-0 rounded-md bg-vercel-pink/10"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  />
+                )}
+              </motion.button>
             ) : (
               <div>
                 <motion.button
-                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-md text-sm font-medium"
+                  className="px-4 py-2 bg-white/10 border border-white/20 rounded-md text-sm font-medium hover:bg-white/20 transition-colors"
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -211,7 +228,7 @@ export default function LandingPage() {
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="absolute right-0 mt-2 w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-4 z-20"
+                      className="absolute right-0 mt-2 w-64 vercel-card p-4 z-20"
                     >
                       <h3 className="text-lg font-bold mb-2">Smart Profile</h3>
                       <p className="text-sm text-gray-400">
@@ -226,7 +243,7 @@ export default function LandingPage() {
                         <strong>NFTs Minted:</strong> {profile?.extendedPrivateData?.nfts?.length || 0}
                       </p>
                       <motion.button
-                        className="mt-4 w-full px-4 py-2 bg-purple-600 rounded-md text-sm hover:bg-purple-700 transition-colors"
+                        className="mt-4 w-full px-4 py-2 bg-white text-black rounded-md text-sm hover:bg-white/90 transition-colors"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => router.push('/app')}
@@ -248,25 +265,29 @@ export default function LandingPage() {
             animate={{ x: 0, opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-red-500">
-              Turn Code Into Digital Assets
+            <h1 className="text-4xl md:text-6xl font-bold mb-6">
+              Turn Code Into <span className="text-vercel-pink">Digital Assets</span>
             </h1>
-            <p className="text-xl text-gray-300 mb-8">
+            <p className="text-xl text-gray-400 mb-8">
               Mint your GitHub repositories as NFTs on Solana. Own, trade, and monetize your code in the most innovative marketplace for developers.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <motion.button
-                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg font-medium text-lg shadow-lg hover:shadow-purple-500/20 transition-all"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className="px-8 py-4 bg-white text-black rounded-lg font-medium text-lg shadow-lg transition-all relative overflow-hidden group"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => router.push('/app')}
               >
-                Get Started
+                <span className="relative z-10">Get Started</span>
+                <motion.div 
+                  className="absolute inset-0 bg-vercel-pink opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+                  initial={false}
+                />
               </motion.button>
               <motion.button
-                className="px-8 py-4 bg-gray-800 border border-gray-700 rounded-lg font-medium text-lg hover:bg-gray-700 transition-all"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className="px-8 py-4 bg-transparent border border-white/20 rounded-lg font-medium text-lg hover:bg-white/10 transition-all"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => router.push('/app')}
               >
                 Explore Repos
@@ -281,7 +302,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.4 }}
           >
             <motion.div
-              className="w-full max-w-md h-80 bg-gray-800 rounded-xl p-6 shadow-xl relative overflow-hidden border border-gray-700"
+              className="w-full max-w-md h-80 vercel-card p-6 relative overflow-hidden"
               animate={{ 
                 rotateY: [0, 5, 0, -5, 0],
                 rotateX: [0, -5, 0, 5, 0],
@@ -292,7 +313,7 @@ export default function LandingPage() {
                 ease: "easeInOut" 
               }}
             >
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-purple-500/10 to-blue-500/10 z-0"></div>
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-vercel-pink/5 to-vercel-blue/5 z-0"></div>
               <div className="relative z-10">
                 <div className="flex justify-between items-start">
                   <div>
@@ -309,28 +330,30 @@ export default function LandingPage() {
                       <span>Updated 2 days ago</span>
                     </div>
                   </div>
-                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
-                    <span className="text-xl"></span>
+                  <div className="h-12 w-12 rounded-full bg-black border border-white/20 flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2L2 19.5H22L12 2Z" fill="white"/>
+                    </svg>
                   </div>
                 </div>
                 
-                <div className="mt-6 border-t border-gray-700 pt-4">
+                <div className="mt-6 border-t border-white/10 pt-4">
                   <p className="text-gray-300">A comprehensive library of secure, audited smart contracts for DeFi applications.</p>
                 </div>
                 
                 <div className="mt-6 flex justify-between items-center">
                   <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-400 to-blue-500"></div>
+                    <div className="w-8 h-8 rounded-full bg-vercel-blue"></div>
                     <span className="ml-2 font-medium">@cryptoMaster</span>
                   </div>
                   <div className="flex items-center text-xl font-bold">
                     <span>4.2</span>
-                    <span className="text-purple-400 ml-1">SOL</span>
+                    <span className="text-vercel-pink ml-1">SOL</span>
                   </div>
                 </div>
                 
                 <motion.div 
-                  className="mt-8 p-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg text-center"
+                  className="mt-8 p-2 bg-white text-black rounded-lg text-center"
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => router.push('/app')}
@@ -365,7 +388,7 @@ export default function LandingPage() {
           </motion.div>
         </div>
 
-        <div id="features" className="py-16 px-8 md:px-16 bg-gray-800/50">
+        <div id="features" className="py-16 px-8 md:px-16 bg-black/30 backdrop-blur-sm">
           <motion.div
             initial={{ y: 50, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
@@ -374,19 +397,19 @@ export default function LandingPage() {
             className="text-center mb-12"
           >
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Revolutionary Features</h2>
-            <p className="text-gray-300 max-w-2xl mx-auto">Transform your repositories into valuable assets with our cutting-edge NFT marketplace</p>
+            <p className="text-gray-400 max-w-2xl mx-auto">Transform your repositories into valuable assets with our cutting-edge NFT marketplace</p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
               <motion.div
                 key={feature.id}
-                className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:border-purple-500 transition-all duration-300"
+                className="vercel-card p-6 hover:border-vercel-pink/50 transition-all duration-300"
                 initial={{ y: 50, opacity: 0 }}
                 whileInView={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 viewport={{ once: true }}
-                whileHover={{ y: -5, boxShadow: "0 10px 30px -15px rgba(156, 39, 176, 0.3)" }}
+                whileHover={{ y: -5 }}
               >
                 <div className="text-4xl mb-4">{feature.icon}</div>
                 <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
@@ -405,14 +428,14 @@ export default function LandingPage() {
             className="text-center mb-12"
           >
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Trending Repositories</h2>
-            <p className="text-gray-300 max-w-2xl mx-auto">Discover the most valuable and in-demand GitHub repositories on our marketplace</p>
+            <p className="text-gray-400 max-w-2xl mx-auto">Discover the most valuable and in-demand GitHub repositories on our marketplace</p>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {trendingRepos.map((repo, index) => (
               <motion.div
                 key={repo.id}
-                className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden"
+                className="vercel-card relative"
                 initial={{ y: 50, opacity: 0 }}
                 whileInView={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -421,7 +444,7 @@ export default function LandingPage() {
                 onHoverEnd={() => setHoveredCard(null)}
                 whileHover={{ y: -5 }}
               >
-                <div className="h-2 bg-gradient-to-r from-purple-500 to-blue-500"></div>
+                <div className="h-1 bg-vercel-pink w-full absolute top-0 left-0 rounded-t-lg"></div>
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <h3 className="text-xl font-bold">{repo.name}</h3>
@@ -434,9 +457,9 @@ export default function LandingPage() {
                     <span>Owner: @{repo.owner}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xl font-bold text-purple-400">{repo.price}</span>
+                    <span className="text-xl font-bold text-vercel-pink">{repo.price}</span>
                     <motion.button
-                      className="px-4 py-2 bg-purple-600 rounded-lg text-sm font-medium"
+                      className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => router.push('/app')}
@@ -451,7 +474,7 @@ export default function LandingPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-blue-500/10 pointer-events-none"
+                      className="absolute inset-0 bg-gradient-to-br from-vercel-pink/5 to-vercel-blue/5 pointer-events-none rounded-lg"
                     />
                   )}
                 </AnimatePresence>
@@ -461,7 +484,7 @@ export default function LandingPage() {
           
           <div className="text-center mt-12">
             <motion.button
-              className="px-6 py-3 bg-gray-800 border border-gray-700 rounded-lg font-medium hover:bg-gray-700 transition-all"
+              className="px-6 py-3 bg-transparent border border-white/20 rounded-lg font-medium hover:bg-white/10 transition-all"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => router.push('/app')}
@@ -471,7 +494,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div id="how-it-works" className="py-16 px-8 md:px-16 bg-gray-800/50">
+        <div id="how-it-works" className="py-16 px-8 md:px-16 bg-black/30 backdrop-blur-sm">
           <motion.div
             initial={{ y: 50, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
@@ -480,11 +503,11 @@ export default function LandingPage() {
             className="text-center mb-12"
           >
             <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
-            <p className="text-gray-300 max-w-2xl mx-auto">Simple steps to turn your GitHub repositories into valuable NFTs</p>
+            <p className="text-gray-400 max-w-2xl mx-auto">Simple steps to turn your GitHub repositories into valuable NFTs</p>
           </motion.div>
 
           <div className="relative">
-            <div className="absolute top-1/2 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500 transform -translate-y-1/2 hidden md:block"></div>
+            <div className="absolute top-1/2 left-0 w-full h-px bg-white/10 transform -translate-y-1/2 hidden md:block"></div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
               {[
@@ -501,10 +524,24 @@ export default function LandingPage() {
                   viewport={{ once: true }}
                 >
                   <motion.div 
-                    className="w-20 h-20 rounded-full bg-gray-900 border-4 border-purple-500 flex items-center justify-center text-3xl mb-6"
-                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    className="w-20 h-20 rounded-full bg-black border border-white/20 flex items-center justify-center text-3xl mb-6 relative"
+                    whileHover={{ scale: 1.1 }}
                   >
                     {step.icon}
+                    <motion.div 
+                      className="absolute inset-0 rounded-full border border-vercel-pink opacity-0"
+                      animate={{ 
+                        opacity: [0, 0.5, 0],
+                        scale: [1, 1.2, 1],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        repeatType: "loop",
+                        ease: "easeInOut",
+                        delay: index * 0.3,
+                      }}
+                    />
                   </motion.div>
                   <h3 className="text-xl font-bold mb-2">{step.title}</h3>
                   <p className="text-gray-400 text-center">{step.description}</p>
@@ -516,7 +553,7 @@ export default function LandingPage() {
 
         <div className="py-16 px-8 md:px-16">
           <motion.div 
-            className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-8 md:p-12 border border-gray-700 overflow-hidden relative"
+            className="vercel-card p-8 md:p-12 relative overflow-hidden"
             initial={{ y: 50, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.6 }}
@@ -526,7 +563,7 @@ export default function LandingPage() {
               {isLoaded && Array.from({ length: 10 }).map((_, i) => (
                 <motion.div
                   key={i}
-                  className="absolute rounded-full bg-purple-500 opacity-5"
+                  className="absolute rounded-full bg-vercel-pink opacity-5"
                   style={{
                     top: `${Math.random() * 100}%`,
                     left: `${Math.random() * 100}%`,
@@ -549,66 +586,92 @@ export default function LandingPage() {
             <div className="relative z-10 flex flex-col md:flex-row justify-between items-center">
               <div className="md:w-2/3 mb-8 md:mb-0">
                 <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Transform Your Code?</h2>
-                <p className="text-gray-300 text-lg">Join the revolution of code ownership and monetization with our innovative NFT marketplace.</p>
+                <p className="text-gray-400 text-lg">Join the revolution of code ownership and monetization with our innovative NFT marketplace.</p>
               </div>
               <motion.button
-                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg font-medium text-lg shadow-lg hover:shadow-purple-500/20 transition-all"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className="px-8 py-4 bg-white text-black rounded-lg font-medium text-lg shadow-lg transition-all relative overflow-hidden group"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => router.push('/app')}
               >
-                Start Minting Now
+                <span className="relative z-10">Start Minting Now</span>
+                <motion.div 
+                  className="absolute inset-0 bg-vercel-pink opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+                  initial={false}
+                />
               </motion.button>
             </div>
           </motion.div>
         </div>
 
-        <footer className="py-12 px-8 md:px-16 border-t border-gray-800">
+        <footer className="py-12 px-8 md:px-16 border-t border-white/10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg mr-2" />
-                <h3 className="text-lg font-bold">NFT Repo Marketplace</h3>
+                <div className="w-8 h-8 bg-black rounded-lg mr-2 flex items-center justify-center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 19.5H22L12 2Z" fill="white"/>
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold">NEAW</h3>
               </div>
-              <p className="text-gray-400">The future of code ownership and monetization on Solana.</p>
+              <p className="text-gray-400 text-sm">The future of code ownership and monetization on Solana.</p>
+              <div className="flex space-x-4 mt-4">
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                  </svg>
+                </a>
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+                  </svg>
+                </a>
+                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                  <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19.54 0c1.356 0 2.46 1.104 2.46 2.472v19.056c0 1.368-1.104 2.472-2.46 2.472h-15.080c-1.356 0-2.46-1.104-2.46-2.472v-19.056c0-1.368 1.104-2.472 2.46-2.472h15.080zm-7.54 8.188c-2.944 0-5.332 2.388-5.332 5.332 0 2.944 2.388 5.332 5.332 5.332 2.944 0 5.332-2.388 5.332-5.332 0-2.944-2.388-5.332-5.332-5.332zm0 1.77c1.968 0 3.563 1.595 3.563 3.562 0 1.968-1.595 3.563-3.563 3.563-1.968 0-3.563-1.595-3.563-3.563 0-1.967 1.595-3.562 3.563-3.562zm6.208-4.958c.792 0 1.434.642 1.434 1.434 0 .792-.642 1.434-1.434 1.434-.792 0-1.434-.642-1.434-1.434 0-.792.642-1.434 1.434-1.434z"/>
+                  </svg>
+                </a>
+              </div>
             </div>
             
             <div>
-              <h4 className="text-lg font-semibold mb-4">Platform</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#how-it-works" className="hover:text-purple-400 transition-colors">How It Works</a></li>
-                <li><a href="#trending" className="hover:text-purple-400 transition-colors">Marketplace</a></li>
-                <li><a href="#features" className="hover:text-purple-400 transition-colors">Features</a></li>
-                <li><a href="#" className="hover:text-purple-400 transition-colors">Pricing</a></li>
+              <h4 className="text-sm font-semibold mb-4 text-gray-300">Platform</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li><a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a></li>
+                <li><a href="#trending" className="hover:text-white transition-colors">Marketplace</a></li>
+                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Pricing</a></li>
               </ul>
             </div>
             
             <div>
-              <h4 className="text-lg font-semibold mb-4">Resources</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><a href="#" className="hover:text-purple-400 transition-colors">Documentation</a></li>
-                <li><a href="#" className="hover:text-purple-400 transition-colors">API</a></li>
-                <li><a href="#" className="hover:text-purple-400 transition-colors">GitHub</a></li>
-                <li><a href="#" className="hover:text-purple-400 transition-colors">Blog</a></li>
+              <h4 className="text-sm font-semibold mb-4 text-gray-300">Resources</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li><a href="#" className="hover:text-white transition-colors">Documentation</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">API</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">GitHub</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
               </ul>
             </div>
             
             <div>
-              <h4 className="text-lg font-semibold mb-4">Connect</h4>
-              <ul>
-                <li><a href="https://www.linkedin.com/in/prashant-dubey-59826521b/" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors">LinkedIn</a></li>
-                <li><a href="https://x.com/pdubey1924" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors">X (Twitter)</a></li>
-                <li><a href="https://discord.com/users/prashantdubey1924_55932" target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 transition-colors">Discord</a></li>
-                <li><a href="mailto:pdubey1924@gmail.com" className="hover:text-purple-400 transition-colors">Email</a></li>
+              <h4 className="text-sm font-semibold mb-4 text-gray-300">Connect</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li><a href="https://www.linkedin.com/in/prashant-dubey-59826521b/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">LinkedIn</a></li>
+                <li><a href="https://x.com/pdubey1924" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">X (Twitter)</a></li>
+                <li><a href="https://discord.com/users/prashantdubey1924_55932" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Discord</a></li>
+                <li><a href="mailto:pdubey1924@gmail.com" className="hover:text-white transition-colors">Email</a></li>
               </ul>
             </div>
           </div>
           
-          <div className="mt-12 pt-6 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center text-gray-400 text-sm">
-            <p>© 2025 NFT Repo Marketplace. All rights reserved.</p>
+          <div className="mt-12 pt-6 border-t border-white/10 flex flex-col md:flex-row justify-between items-center text-gray-400 text-xs">
+            <p>© {new Date().getFullYear()} NEAW. All rights reserved.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              <a href="#" className="hover:text-purple-400 transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-purple-400 transition-colors">Terms of Service</a>
+              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
+              <a href="#" className="hover:text-white transition-colors">Cookie Policy</a>
             </div>
           </div>
         </footer>

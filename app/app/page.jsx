@@ -404,7 +404,7 @@ export default function AppPage() {
 
   return (
     <motion.div
-      className="min-h-screen bg-gray-900 text-white overflow-hidden relative"
+      className="min-h-screen bg-black text-white overflow-hidden relative"
       initial={{ opacity: 0 }}
       animate={{ opacity: fadeIn ? 1 : 0 }}
       transition={{ duration: 0.5 }}
@@ -414,7 +414,7 @@ export default function AppPage() {
           {Array.from({ length: 15 }).map((_, i) => (
             <motion.div
               key={i}
-              className="absolute rounded-full bg-purple-500 opacity-10"
+              className="absolute rounded-full bg-vercel-pink/5 opacity-10"
               style={{
                 top: `${Math.random() * 100}%`,
                 left: `${Math.random() * 100}%`,
@@ -435,21 +435,25 @@ export default function AppPage() {
         </div>
       </div>
 
-      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+      <div className="absolute inset-0 bg-grid-pattern"></div>
 
       <div className="relative z-10">
         <motion.nav
-          className="flex justify-between items-center py-4 px-6 md:px-12 border-b border-gray-800 bg-gray-900/80 backdrop-blur-sm sticky top-0 z-20"
+          className="flex justify-between items-center py-4 px-6 md:px-12 border-b border-white/10 bg-black/80 backdrop-blur-sm sticky top-0 z-20"
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.4 }}
         >
           <div className="flex items-center">
             <motion.div
-              className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg mr-3"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            />
+              className="w-8 h-8 bg-black rounded-lg mr-3 flex items-center justify-center"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 19.5H22L12 2Z" fill="white"/>
+              </svg>
+            </motion.div>
             <Link href="/" className="text-xl font-bold tracking-tight">
               NEAW
             </Link>
@@ -459,7 +463,7 @@ export default function AppPage() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className={`px-4 py-2 rounded-md transition-colors ${activeTab === 'marketplace' ? 'bg-gray-800 text-purple-400' : 'text-gray-300 hover:text-white'}`}
+                className={`px-4 py-2 rounded-md transition-colors text-sm ${activeTab === 'marketplace' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}
                 onClick={() => setActiveTab('marketplace')}
               >
                 Marketplace
@@ -467,7 +471,7 @@ export default function AppPage() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className={`px-4 py-2 rounded-md transition-colors ${activeTab === 'portfolio' ? 'bg-gray-800 text-purple-400' : 'text-gray-300 hover:text-white'}`}
+                className={`px-4 py-2 rounded-md transition-colors text-sm ${activeTab === 'portfolio' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}
                 onClick={() => {
                   setActiveTab('portfolio');
                   if (!wallet) setShowConnectModal(true);
@@ -478,7 +482,7 @@ export default function AppPage() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className={`px-4 py-2 rounded-md transition-colors ${activeTab === 'repositories' ? 'bg-gray-800 text-purple-400' : 'text-gray-300 hover:text-white'}`}
+                className={`px-4 py-2 rounded-md transition-colors text-sm ${activeTab === 'repositories' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}
                 onClick={() => setActiveTab('repositories')}
               >
                 Repositories
@@ -490,7 +494,7 @@ export default function AppPage() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-md font-medium text-white shadow-lg hover:shadow-purple-500/20 transition-all"
+                  className="flex items-center space-x-2 px-4 py-2 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors"
                   onClick={() => setShowConnectModal(true)}
                   disabled={loading}
                 >
@@ -498,39 +502,13 @@ export default function AppPage() {
                 </motion.button>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <div className="hidden md:flex items-center bg-gray-800 px-3 py-2 rounded-md">
-                    <span className="inline-block w-3 h-3 bg-green-400 rounded-full mr-2"></span>
-                    <span className="text-sm font-medium">
-                      {(wallet instanceof PublicKey ? wallet.toString() : wallet?.toString?.() || '').slice(0, 4)}...
-                      {(wallet instanceof PublicKey ? wallet.toString() : wallet?.toString?.() || '').slice(-4)}
-                    </span>
-                  </div>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="p-2 bg-gray-800 rounded-md hover:bg-gray-700 text-gray-300 hover:text-white transition-colors md:hidden"
+                    className="px-4 py-2 bg-white/10 border border-white/20 rounded-md text-sm font-medium hover:bg-white/20 transition-colors"
                     onClick={disconnectWallet}
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V4a1 1 0 00-1-1H3zm5 4a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1zm-2 3a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 5a1 1 0 100 2h6a1 1 0 100-2H7z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="hidden md:block px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 text-gray-300 hover:text-white transition-colors"
-                    onClick={disconnectWallet}
-                  >
-                    Disconnect
+                    {wallet.toString().slice(0, 4)}...{wallet.toString().slice(-4)}
                   </motion.button>
                 </div>
               )}
@@ -594,12 +572,12 @@ export default function AppPage() {
           <AnimatePresence>
             {notification && (
               <motion.div
-                className={`fixed top-20 right-4 z-50 max-w-sm p-4 rounded-lg shadow-lg ${
+                className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
                   notification.type === 'success'
-                    ? 'bg-green-800'
+                    ? 'bg-green-900/20 border border-green-500/20'
                     : notification.type === 'error'
-                    ? 'bg-red-800'
-                    : 'bg-blue-800'
+                    ? 'bg-red-900/20 border border-red-500/20'
+                    : 'bg-blue-900/20 border border-blue-500/20'
                 }`}
                 initial={{ opacity: 0, y: -20, x: 20 }}
                 animate={{ opacity: 1, y: 0, x: 0 }}
@@ -655,7 +633,7 @@ export default function AppPage() {
                       />
                     </svg>
                   )}
-                  <p className="text-white">{notification.message}</p>
+                  <span>{notification.message}</span>
                 </div>
               </motion.div>
             )}
@@ -664,95 +642,41 @@ export default function AppPage() {
           <AnimatePresence>
             {showConnectModal && (
               <motion.div
-                className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+                className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setShowConnectModal(false)}
               >
                 <motion.div
-                  className="bg-gray-800 rounded-xl p-6 w-full max-w-md border border-gray-700 shadow-xl mx-4"
+                  className="vercel-card p-6 max-w-md w-full mx-4"
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.9, opacity: 0 }}
-                  transition={{ type: "spring", damping: 20 }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold">Connect to Continue</h2>
-                    <button
-                      onClick={() => setShowConnectModal(false)}
-                      className="text-gray-400 hover:text-white"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-
+                  <h2 className="text-xl font-bold mb-4">Connect Your Wallet</h2>
+                  <p className="text-gray-400 mb-6">
+                    Connect your Solana wallet to mint and trade NFTs on our platform.
+                  </p>
                   <div className="space-y-4">
                     <motion.button
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                      className="flex items-center justify-center w-full p-3 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg font-medium text-white hover:shadow-purple-500/20 transition-all"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full px-4 py-3 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors flex items-center justify-center space-x-2"
                       onClick={connectWallet}
                       disabled={loading}
                     >
-                      <svg
-                        className="w-6 h-6 mr-2"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M4 4H20C21.1046 4 22 4.89543 22 6V18C22 19.1046 21.1046 20 20 20H4C2.89543 20 2 19.1046 2 18V6C2 4.89543 2.89543 4 4 4Z"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M22 7L12 13L2 7"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      Connect Phantom Wallet
+                      <img src="/phantom.png" alt="Phantom" className="w-6 h-6" />
+                      <span>{loading ? 'Connecting...' : 'Connect Phantom'}</span>
                     </motion.button>
-
                     <motion.button
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                      className="flex items-center justify-center w-full p-3 bg-gray-700 rounded-lg font-medium text-white hover:bg-gray-600 transition-all"
-                      onClick={connectGitHub}
-                      disabled={loading}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full px-4 py-3 bg-transparent border border-white/20 rounded-md text-sm font-medium hover:bg-white/10 transition-colors"
+                      onClick={() => setShowConnectModal(false)}
                     >
-                      <svg
-                        className="w-6 h-6 mr-2"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          clipRule="evenodd"
-                          d="M12 0C5.37 0 0 5.37 0 12C0 17.31 3.435 21.795 8.205 23.385C8.805 23.49 9.03 23.13 9.03 22.815C9.03 22.53 9.015 21.585 9.015 20.58C6 21.135 5.22 19.845 4.98 19.17C4.845 18.825 4.26 17.76 3.75 17.475C3.33 17.25 2.73 16.695 3.735 16.68C4.68 16.665 5.355 17.55 5.58 17.91C6.66 19.725 8.385 19.215 9.075 18.9C9.18 18.12 9.495 17.595 9.84 17.295C7.17 16.995 4.38 15.96 4.38 11.37C4.38 10.065 4.845 8.985 5.61 8.145C5.49 7.845 5.07 6.615 5.73 4.965C5.73 4.965 6.735 4.65 9.03 6.195C9.99 5.925 11.01 5.79 12.03 5.79C13.05 5.79 14.07 5.925 15.03 6.195C17.325 4.635 18.33 4.965 18.33 4.965C18.99 6.615 18.57 7.845 18.45 8.145C19.215 8.985 19.68 10.05 19.68 11.37C19.68 15.975 16.875 16.995 14.205 17.295C14.64 17.67 15.015 18.39 15.015 19.515C15.015 21Z"
-                        />
-                      </svg>
-                      Connect GitHub
+                      Cancel
                     </motion.button>
                   </div>
                 </motion.div>
@@ -769,60 +693,97 @@ export default function AppPage() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <h2 className="text-2xl md:text-3xl font-bold mb-6">NFT Marketplace</h2>
-                {loading && !publicNFTs.length ? (
-                  <p className="text-gray-400">Loading NFTs...</p>
-                ) : error ? (
-                  <p className="text-red-400">{error}</p>
-                ) : filteredPublicNFTs.length === 0 ? (
-                  <p className="text-gray-400">No NFTs available</p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredPublicNFTs.map((nft) => (
-                      <motion.div
-                        key={nft.mint}
-                        className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-purple-500 transition-colors"
-                        whileHover={{ y: -5 }}
-                        transition={{ type: "spring", stiffness: 300 }}
+                <div>
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                    <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-0">NFT Marketplace</h1>
+                    <div className="relative w-full md:w-64">
+                      <input
+                        type="text"
+                        placeholder="Search NFTs..."
+                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-md focus:outline-none focus:ring-2 focus:ring-vercel-pink/20 text-white"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                      <svg
+                        className="absolute right-3 top-2.5 h-5 w-5 text-gray-400"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
                       >
-                        <img
-                          src={`https://opengraph.githubassets.com/1/${nft.full_name || ''}`}
-                          alt={nft.name || 'NFT'}
-                          className="w-full h-48 object-cover"
-                          onError={(e) => (e.target.src = '/fallback-image.png')}
+                        <path
+                          fillRule="evenodd"
+                          d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                          clipRule="evenodd"
                         />
-                        <div className="p-4">
-                          <h3 className="text-lg font-semibold truncate">{nft.name || 'Unnamed NFT'}</h3>
-                          <p className="text-sm text-gray-400 truncate">{nft.description || 'No description'}</p>
-                          <div className="mt-2 space-y-1">
-                            <p className="text-sm">
-                              <span className="text-gray-400">Language:</span> {nft.language || 'None'}
-                            </p>
-                            <p className="text-sm">
-                              <span className="text-gray-400">Stars:</span> {nft.stars || 0}
-                            </p>
-                          </div>
-                          {nft.for_sale && (
-                            <div className="mt-4">
-                              <p className="text-purple-400 font-medium">{nft.price} SOL</p>
-                              {nft.owner !== (wallet instanceof PublicKey ? wallet.toString() : wallet?.toString?.() || '') && (
-                                <motion.button
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  className="mt-2 w-full bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700 transition-colors"
-                                  onClick={() => buyNFT(nft)}
-                                  disabled={loading}
-                                >
-                                  {loading ? 'Processing...' : 'Buy Now'}
-                                </motion.button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    ))}
+                      </svg>
+                    </div>
                   </div>
-                )}
+
+                  {loading ? (
+                    <div className="flex justify-center items-center h-64">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+                    </div>
+                  ) : error ? (
+                    <div className="bg-red-900/20 border border-red-500/20 rounded-lg p-4 text-center">
+                      <p className="text-red-400">{error}</p>
+                    </div>
+                  ) : publicNFTs.length === 0 ? (
+                    <div className="vercel-card p-8 text-center">
+                      <p className="text-gray-400 mb-4">No NFTs available in the marketplace yet</p>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="px-4 py-2 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors"
+                        onClick={() => setActiveTab('repositories')}
+                      >
+                        Mint Your First NFT
+                      </motion.button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {publicNFTs
+                        .filter((nft) =>
+                          nft.name?.toLowerCase().includes(searchQuery.toLowerCase()) || false
+                        )
+                        .map((nft) => (
+                          <motion.div
+                            key={nft.mint}
+                            className="vercel-card relative"
+                            whileHover={{ y: -5 }}
+                          >
+                            <div className="h-1 bg-vercel-pink w-full absolute top-0 left-0 rounded-t-lg"></div>
+                            <div className="p-6">
+                              <div className="flex justify-between items-start mb-4">
+                                <h3 className="text-lg font-bold">{nft.name}</h3>
+                                <div className="flex items-center text-yellow-400">
+                                  <span className="mr-1">★</span>
+                                  <span>{nft.stars || 0}</span>
+                                </div>
+                              </div>
+                              <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+                                {nft.description || 'No description available'}
+                              </p>
+                              <div className="flex justify-between items-center mb-4">
+                                <span className="text-sm text-gray-400">
+                                  Owner: {nft.owner?.slice(0, 6)}...
+                                </span>
+                                <span className="text-vercel-pink font-bold">{nft.price} SOL</span>
+                              </div>
+                              <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                className="w-full px-4 py-2 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors"
+                                onClick={() => buyNFT(nft)}
+                                disabled={!wallet || loading}
+                              >
+                                {loading === nft.mint ? 'Processing...' : 'Buy Now'}
+                              </motion.button>
+                            </div>
+                          </motion.div>
+                        ))}
+                    </div>
+                  )}
+                </div>
               </motion.div>
             )}
 
@@ -834,136 +795,211 @@ export default function AppPage() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <h2 className="text-2xl md:text-3xl font-bold mb-6">My Portfolio</h2>
-                {!wallet ? (
-                  <p className="text-gray-400">Connect your wallet to view your NFTs</p>
-                ) : loading && !userNFTs.length ? (
-                  <p className="text-gray-400">Loading your NFTs...</p>
-                ) : error ? (
-                  <p className="text-red-400">{error}</p>
-                ) : userNFTs.length === 0 ? (
-                  <p className="text-gray-400">You don’t own any NFTs yet</p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {userNFTs.map((nft) => (
-                      <motion.div
-                        key={nft.mint}
-                        className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-purple-500 transition-colors"
-                        whileHover={{ y: -5 }}
-                        transition={{ type: "spring", stiffness: 300 }}
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold mb-8">My NFT Portfolio</h1>
+
+                  {!wallet ? (
+                    <div className="vercel-card p-8 text-center">
+                      <p className="text-gray-400 mb-4">Connect your wallet to view your NFTs</p>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="px-4 py-2 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors"
+                        onClick={() => setShowConnectModal(true)}
                       >
-                        <img
-                          src={`https://opengraph.githubassets.com/1/${nft.full_name || ''}`}
-                          alt={nft.name || 'NFT'}
-                          className="w-full h-48 object-cover"
-                          onError={(e) => (e.target.src = '/fallback-image.png')}
-                        />
-                        <div className="p-4">
-                          <h3 className="text-lg font-semibold truncate">{nft.name || 'Unnamed NFT'}</h3>
-                          <p className="text-sm text-gray-400 truncate">{nft.description || 'No description'}</p>
-                          {!nft.for_sale ? (
-                            <div className="mt-4">
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={priceInputs[nft.mint] || ''}
-                                onChange={(e) => handlePriceChange(nft.mint, e.target.value)}
-                                placeholder="Price in SOL"
-                                className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                              />
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className="mt-2 w-full bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700 transition-colors"
-                                onClick={() => listForSale(nft.mint, priceInputs[nft.mint])}
-                                disabled={loading}
-                              >
-                                {loading ? 'Listing...' : 'List for Sale'}
-                              </motion.button>
+                        Connect Wallet
+                      </motion.button>
+                    </div>
+                  ) : loading ? (
+                    <div className="flex justify-center items-center h-64">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+                    </div>
+                  ) : error ? (
+                    <div className="bg-red-900/20 border border-red-500/20 rounded-lg p-4 text-center">
+                      <p className="text-red-400">{error}</p>
+                    </div>
+                  ) : userNFTs.length === 0 ? (
+                    <div className="vercel-card p-8 text-center">
+                      <p className="text-gray-400 mb-4">You don't own any NFTs yet</p>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="px-4 py-2 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors"
+                        onClick={() => setActiveTab('repositories')}
+                      >
+                        Mint Your First NFT
+                      </motion.button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {userNFTs.map((nft) => (
+                        <motion.div
+                          key={nft.mint}
+                          className="vercel-card relative"
+                          whileHover={{ y: -5 }}
+                        >
+                          <div className="h-1 bg-vercel-blue w-full absolute top-0 left-0 rounded-t-lg"></div>
+                          <div className="p-6">
+                            <div className="flex justify-between items-start mb-4">
+                              <h3 className="text-lg font-bold">{nft.name}</h3>
+                              <div className="flex items-center text-yellow-400">
+                                <span className="mr-1">★</span>
+                                <span>{nft.stars || 0}</span>
+                              </div>
                             </div>
-                          ) : (
-                            <p className="mt-4 text-purple-400 font-medium">Listed for {nft.price} SOL</p>
-                          )}
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
+                            <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+                              {nft.description || 'No description available'}
+                            </p>
+                            
+                            {nft.for_sale ? (
+                              <div className="mb-4">
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="text-sm text-gray-400">Listed Price:</span>
+                                  <span className="text-vercel-pink font-bold">{nft.price} SOL</span>
+                                </div>
+                                <motion.button
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-md text-sm font-medium hover:bg-white/20 transition-colors"
+                                  onClick={() => listForSale(nft.mint, 0)}
+                                  disabled={loading}
+                                >
+                                  {loading === nft.mint ? 'Processing...' : 'Delist'}
+                                </motion.button>
+                              </div>
+                            ) : (
+                              <div className="mb-4">
+                                <div className="flex items-center mb-2">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.1"
+                                    placeholder="Price in SOL"
+                                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-md focus:outline-none focus:ring-2 focus:ring-vercel-pink/20 text-white"
+                                    value={priceInputs[nft.mint] || ''}
+                                    onChange={(e) => handlePriceChange(nft.mint, e.target.value)}
+                                  />
+                                </div>
+                                <motion.button
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  className="w-full px-4 py-2 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors"
+                                  onClick={() => listForSale(nft.mint, priceInputs[nft.mint])}
+                                  disabled={loading || !priceInputs[nft.mint]}
+                                >
+                                  {loading === nft.mint ? 'Processing...' : 'List for Sale'}
+                                </motion.button>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </motion.div>
             )}
 
             {activeTab === 'repositories' && (
-              <motion.div
-                key="repositories"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl md:text-3xl font-bold">My Repositories</h2>
-                  {repos.length === 0 && (
+              <div>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                  <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-0">GitHub Repositories</h1>
+                  <div className="flex space-x-4">
+                    <div className="relative w-full md:w-64">
+                      <input
+                        type="text"
+                        placeholder="Search repositories..."
+                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-md focus:outline-none focus:ring-2 focus:ring-vercel-pink/20 text-white"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                      <svg
+                        className="absolute right-3 top-2.5 h-5 w-5 text-gray-400"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+                      className="px-4 py-2 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors"
                       onClick={connectGitHub}
-                      disabled={loading}
+                    >
+                      {repos.length > 0 ? 'Refresh Repos' : 'Connect GitHub'}
+                    </motion.button>
+                  </div>
+                </div>
+
+                {loading && !repos.length ? (
+                  <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+                  </div>
+                ) : error ? (
+                  <div className="bg-red-900/20 border border-red-500/20 rounded-lg p-4 text-center">
+                    <p className="text-red-400">{error}</p>
+                  </div>
+                ) : repos.length === 0 ? (
+                  <div className="vercel-card p-8 text-center">
+                    <p className="text-gray-400 mb-4">Connect your GitHub account to mint your repositories as NFTs</p>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="px-4 py-2 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors"
+                      onClick={connectGitHub}
                     >
                       Connect GitHub
                     </motion.button>
-                  )}
-                </div>
-                {loading && !repos.length ? (
-                  <p className="text-gray-400">Loading repositories...</p>
-                ) : error ? (
-                  <p className="text-red-400">{error}</p>
-                ) : repos.length === 0 ? (
-                  <p className="text-gray-400">Connect your GitHub to see your repositories</p>
-                ) : filteredRepos.length === 0 ? (
-                  <p className="text-gray-400">No repositories match your search</p>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredRepos.map((repo) => (
                       <motion.div
-                        key={repo.id || Math.random()}
-                        className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-purple-500 transition-colors"
+                        key={repo.id}
+                        className="vercel-card relative"
                         whileHover={{ y: -5 }}
-                        transition={{ type: "spring", stiffness: 300 }}
                       >
-                        <img
-                          src={`https://opengraph.githubassets.com/1/${repo.full_name || ''}`}
-                          alt={repo.name || 'Repository'}
-                          className="w-full h-48 object-cover"
-                          onError={(e) => (e.target.src = '/fallback-image.png')}
-                        />
-                        <div className="p-4">
-                          <h3 className="text-lg font-semibold truncate">{repo.name || 'Unnamed Repo'}</h3>
-                          <p className="text-sm text-gray-400 truncate">{repo.description || 'No description'}</p>
-                          <div className="mt-2 space-y-1">
-                            <p className="text-sm">
-                              <span className="text-gray-400">Language:</span> {repo.language || 'None'}
-                            </p>
-                            <p className="text-sm">
-                              <span className="text-gray-400">Stars:</span> {repo.stargazers_count || 0}
-                            </p>
+                        <div className="h-1 bg-vercel-cyan w-full absolute top-0 left-0 rounded-t-lg"></div>
+                        <div className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <h3 className="text-lg font-bold">{repo.name}</h3>
+                            <div className="flex items-center text-yellow-400">
+                              <span className="mr-1">★</span>
+                              <span>{repo.stargazers_count || 0}</span>
+                            </div>
+                          </div>
+                          <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+                            {repo.description || 'No description available'}
+                          </p>
+                          <div className="flex justify-between items-center mb-4">
+                            <span className="text-sm text-gray-400">
+                              Language: {repo.language || 'None'}
+                            </span>
+                            <span className="text-sm text-gray-400">
+                              Updated: {new Date(repo.updated_at).toLocaleDateString()}
+                            </span>
                           </div>
                           <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            className="mt-4 w-full bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700 transition-colors"
+                            className="w-full px-4 py-2 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors"
                             onClick={() => handleMint(repo)}
-                            disabled={loading && mintingRepo?.id === repo.id}
+                            disabled={!wallet || loading || processingMint === repo.id}
                           >
-                            {loading && mintingRepo?.id === repo.id ? 'Minting...' : 'Mint NFT'}
+                            {processingMint === repo.id ? 'Minting...' : 'Mint as NFT'}
                           </motion.button>
                         </div>
                       </motion.div>
                     ))}
                   </div>
                 )}
-              </motion.div>
+              </div>
             )}
           </AnimatePresence>
 
