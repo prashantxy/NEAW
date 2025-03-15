@@ -5,10 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { Metaplex, walletAdapterIdentity } from '@metaplex-foundation/js';
 import { Connection, PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
+import CoinbaseWalletSDK from '@coinbase/wallet-sdk';
+import { ethers } from 'ethers';
 
 export default function AppPage() {
   const [repos, setRepos] = useState([]);
-  const [wallet, setWallet] = useState(null); // Will store PublicKey instance
+  const [wallet, setWallet] = useState(null); // Stores PublicKey (Solana) or address (Ethereum)
+  const [walletType, setWalletType] = useState(null); // 'phantom' or 'coinbase'
   const [publicNFTs, setPublicNFTs] = useState([]);
   const [userNFTs, setUserNFTs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -40,15 +43,12 @@ export default function AppPage() {
           if (resp && resp.publicKey) {
             const publicKey = new PublicKey(resp.publicKey.toString());
             setWallet(publicKey);
-            console.log('Initial wallet:', publicKey, publicKey instanceof PublicKey);
-          } else {
-            console.log('No publicKey in initial wallet response');
+            setWalletType('phantom');
+            console.log('Initial Phantom wallet:', publicKey.toString());
           }
         } catch (e) {
-          console.log('No previous wallet connection found:', e);
+          console.log('No previous Phantom connection:', e);
         }
-      } else {
-        console.log('Phantom wallet not detected on page load');
       }
     };
 
@@ -93,7 +93,7 @@ export default function AppPage() {
     }
   };
 
-  const connectWallet = async () => {
+  const connectPhantomWallet = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -102,22 +102,55 @@ export default function AppPage() {
         throw new Error('Phantom wallet not found. Please install Phantom.');
       }
       const response = await solana.connect();
-      console.log('Phantom response:', response);
       if (!response || !response.publicKey) {
-        throw new Error('Failed to retrieve public key from wallet');
+        throw new Error('Failed to retrieve public key from Phantom');
       }
-      const publicKeyString = response.publicKey.toString();
-      console.log('Phantom publicKey string:', publicKeyString);
-      
-      const publicKey = new PublicKey(publicKeyString);
+      const publicKey = new PublicKey(response.publicKey.toString());
       setWallet(publicKey);
-      console.log('Wallet set to:', publicKey, publicKey instanceof PublicKey);
-      showNotification('Wallet connected successfully!', 'success');
+      setWalletType('phantom');
+      console.log('Phantom wallet connected:', publicKey.toString());
+      showNotification('Phantom wallet connected successfully!', 'success');
       setShowConnectModal(false);
       return publicKey;
     } catch (err) {
-      setError('Wallet connection failed: ' + err.message);
-      showNotification('Wallet connection failed: ' + err.message, 'error');
+      setError('Phantom connection failed: ' + err.message);
+      showNotification('Phantom connection failed: ' + err.message, 'error');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const connectCoinbaseWallet = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const coinbaseWallet = new CoinbaseWalletSDK({
+        appName: 'NEAW',
+        appLogoUrl: '', // Optional
+        darkMode: false,
+      });
+
+      const provider = coinbaseWallet.makeWeb3Provider(); // v4.x syntax
+      const ethersProvider = new ethers.BrowserProvider(provider);
+
+      const accounts = await provider.request({ method: 'eth_requestAccounts' });
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No accounts returned by Coinbase Wallet');
+      }
+
+      const signer = await ethersProvider.getSigner();
+      const address = await signer.getAddress();
+
+      setWallet(address);
+      setWalletType('coinbase');
+      console.log('Coinbase wallet connected:', address);
+      showNotification('Coinbase wallet connected successfully!', 'success');
+      setShowConnectModal(false);
+      return address;
+    } catch (err) {
+      setError('Coinbase connection failed: ' + err.message);
+      showNotification('Coinbase connection failed: ' + err.message, 'error');
       throw err;
     } finally {
       setLoading(false);
@@ -125,72 +158,68 @@ export default function AppPage() {
   };
 
   const disconnectWallet = () => {
-    const { solana } = window;
-    if (solana?.isPhantom) {
-      solana.disconnect();
-      setWallet(null);
-      setUserNFTs([]);
-      showNotification('Wallet disconnected', 'info');
+    if (walletType === 'phantom') {
+      const { solana } = window;
+      if (solana?.isPhantom) {
+        solana.disconnect();
+      }
+    } else if (walletType === 'coinbase') {
+      // Coinbase Wallet SDK v4.x doesn’t have a direct disconnect method; reset state
+      // Future improvement: Use `coinbaseWallet.disconnect()` if added in later versions
     }
+    setWallet(null);
+    setWalletType(null);
+    setUserNFTs([]);
+    showNotification('Wallet disconnected', 'info');
   };
 
   const mintNFT = async (repo, walletKey) => {
-    if (!walletKey) {
-      throw new Error('No wallet key provided');
+    if (!walletKey) throw new Error('No wallet key provided');
+    if (!walletType) throw new Error('Wallet type not set');
+
+    if (walletType === 'phantom') {
+      const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+      const { solana } = window;
+      if (!solana?.isPhantom) throw new Error('Phantom wallet not found');
+
+      setProcessingMint({ step: 1, message: 'Preparing metadata...' });
+      const response = await axios.post('/api/mint', {
+        repo,
+        wallet: walletKey.toString(),
+      });
+      const { uri } = response.data;
+
+      setProcessingMint({ step: 2, message: 'Minting NFT...' });
+      const metaplex = Metaplex.make(connection).use(walletAdapterIdentity(solana));
+      const { nft } = await metaplex.nfts().create({
+        uri,
+        name: repo.name || 'Untitled',
+        sellerFeeBasisPoints: 500,
+      });
+
+      const nftData = {
+        name: repo.name || 'Untitled',
+        uri,
+        creator: walletKey.toString(),
+        mint: nft.mintAddress.toString(),
+        owner: walletKey.toString(),
+        description: repo.description,
+        language: repo.language || 'None',
+        stars: repo.stargazers_count || 0,
+        forks: repo.forks_count || 0,
+        created_at: repo.created_at,
+        html_url: repo.html_url || '',
+        full_name: repo.full_name || '',
+      };
+
+      setProcessingMint({ step: 3, message: 'Saving to database...' });
+      await axios.post('/api/nfts', nftData);
+
+      return nftData;
+    } else if (walletType === 'coinbase') {
+      // Placeholder for Ethereum NFT minting (requires additional setup, e.g., ERC-721 contract)
+      throw new Error('Ethereum NFT minting not yet implemented');
     }
-    
-    let walletKeyString;
-    if (walletKey instanceof PublicKey) {
-      walletKeyString = walletKey.toString();
-    } else if (typeof walletKey === 'string') {
-      walletKeyString = walletKey;
-    } else if (walletKey && typeof walletKey.toString === 'function') {
-      walletKeyString = walletKey.toString();
-    } else {
-      throw new Error('Invalid wallet key format');
-    }
-    
-    const normalizedWalletKey = new PublicKey(walletKeyString);
-    console.log('Minting with wallet:', normalizedWalletKey.toString());
-
-    const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-    const { solana } = window;
-    if (!solana?.isPhantom) throw new Error('Phantom wallet not found');
-
-    setProcessingMint({ step: 1, message: 'Preparing metadata...' });
-    const response = await axios.post('/api/mint', {
-      repo,
-      wallet: normalizedWalletKey.toString(),
-    });
-    const { uri } = response.data;
-
-    setProcessingMint({ step: 2, message: 'Minting NFT...' });
-    const metaplex = Metaplex.make(connection).use(walletAdapterIdentity(solana));
-    const { nft } = await metaplex.nfts().create({
-      uri,
-      name: repo.name || 'Untitled',
-      sellerFeeBasisPoints: 500,
-    });
-
-    const nftData = {
-      name: repo.name || 'Untitled',
-      uri,
-      creator: normalizedWalletKey.toString(),
-      mint: nft.mintAddress.toString(),
-      owner: normalizedWalletKey.toString(),
-      description: repo.description,
-      language: repo.language || 'None',
-      stars: repo.stargazers_count || 0,
-      forks: repo.forks_count || 0,
-      created_at: repo.created_at,
-      html_url: repo.html_url || '',
-      full_name: repo.full_name || '',
-    };
-
-    setProcessingMint({ step: 3, message: 'Saving to database...' });
-    await axios.post('/api/nfts', nftData);
-
-    return nftData;
   };
 
   const handleMint = async (repo) => {
@@ -204,30 +233,11 @@ export default function AppPage() {
     try {
       let connectedWallet = wallet;
       if (!connectedWallet) {
-        connectedWallet = await connectWallet();
-        if (!connectedWallet) {
-          throw new Error('Wallet connection failed or was canceled');
-        }
-      }
-      
-      if (!connectedWallet) {
-        throw new Error('No wallet is connected');
-      }
-      
-      let normalizedWallet;
-      if (connectedWallet instanceof PublicKey) {
-        normalizedWallet = connectedWallet;
-      } else if (typeof connectedWallet === 'string') {
-        normalizedWallet = new PublicKey(connectedWallet);
-      } else if (connectedWallet && typeof connectedWallet.toString === 'function') {
-        normalizedWallet = new PublicKey(connectedWallet.toString());
-      } else {
-        throw new Error('Invalid wallet format');
+        setShowConnectModal(true);
+        throw new Error('Please connect a wallet');
       }
 
-      console.log('Connected wallet for mint:', normalizedWallet.toString(), normalizedWallet instanceof PublicKey);
-
-      const nft = await mintNFT(repo, normalizedWallet);
+      const nft = await mintNFT(repo, connectedWallet);
 
       setPublicNFTs((prev) => [nft, ...prev]);
       setUserNFTs((prev) => [nft, ...prev]);
@@ -253,16 +263,9 @@ export default function AppPage() {
     setError(null);
     try {
       if (!wallet) throw new Error('Connect wallet first');
-      
-      const walletString = wallet instanceof PublicKey 
-        ? wallet.toString() 
-        : (wallet && typeof wallet.toString === 'function' ? wallet.toString() : null);
-        
-      if (!walletString) {
-        throw new Error('Invalid wallet format');
-      }
-      console.log('Listing with wallet:', walletString);
-      
+      if (!walletType) throw new Error('Wallet type not set');
+
+      const walletString = walletType === 'phantom' ? wallet.toString() : wallet;
       await axios.patch('/api/nfts', { mint, price: parsedPrice, for_sale: true });
 
       setPublicNFTs((prev) =>
@@ -289,54 +292,52 @@ export default function AppPage() {
     setError(null);
     try {
       if (!wallet) throw new Error('Connect wallet first');
+      if (!walletType) throw new Error('Wallet type not set');
 
-      const walletString = wallet instanceof PublicKey 
-        ? wallet.toString() 
-        : (wallet && typeof wallet.toString === 'function' ? wallet.toString() : null);
-      if (!walletString) {
-        throw new Error('Invalid wallet format');
+      if (walletType === 'phantom') {
+        const walletString = wallet.toString();
+        const toPublicKey = new PublicKey(walletString);
+        const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+        const fromPublicKey = new PublicKey(nft.owner);
+
+        setProcessingMint({ step: 1, message: 'Initiating transaction...' });
+        const transaction = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: toPublicKey,
+            toPubkey: fromPublicKey,
+            lamports: Math.floor(nft.price * 1e9),
+          })
+        );
+
+        setProcessingMint({ step: 2, message: 'Requesting signature...' });
+        const { solana } = window;
+        if (!solana) throw new Error('Wallet not found');
+
+        const { signature } = await solana.signAndSendTransaction(transaction);
+
+        setProcessingMint({ step: 3, message: 'Confirming transaction...' });
+        await connection.confirmTransaction(signature);
+
+        setProcessingMint({ step: 4, message: 'Transferring NFT...' });
+        const metaplex = Metaplex.make(connection).use(walletAdapterIdentity(solana));
+        await metaplex.nfts().transfer({
+          nftOrSft: { mintAddress: new PublicKey(nft.mint) },
+          toOwner: toPublicKey,
+        });
+
+        setProcessingMint({ step: 5, message: 'Updating database...' });
+        await axios.patch('/api/nfts', { mint: nft.mint, owner: walletString, for_sale: false });
+
+        setPublicNFTs((prev) =>
+          prev.map((n) => (n.mint === nft.mint ? { ...n, owner: walletString, for_sale: false, price: 0 } : n))
+        );
+        setUserNFTs((prev) => [...prev, { ...nft, owner: walletString, for_sale: false, price: 0 }]);
+
+        showNotification(`Successfully purchased ${nft.name}!`, 'success');
+      } else if (walletType === 'coinbase') {
+        // Placeholder for Ethereum NFT purchase
+        throw new Error('Ethereum NFT purchasing not yet implemented');
       }
-      const toPublicKey = new PublicKey(walletString);
-      console.log('Buying with wallet:', walletString);
-
-      const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-      const fromPublicKey = new PublicKey(nft.owner);
-
-      setProcessingMint({ step: 1, message: 'Initiating transaction...' });
-
-      const transaction = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: toPublicKey,
-          toPubkey: fromPublicKey,
-          lamports: Math.floor(nft.price * 1e9),
-        })
-      );
-
-      setProcessingMint({ step: 2, message: 'Requesting signature...' });
-      const { solana } = window;
-      if (!solana) throw new Error('Wallet not found');
-
-      const { signature } = await solana.signAndSendTransaction(transaction);
-
-      setProcessingMint({ step: 3, message: 'Confirming transaction...' });
-      await connection.confirmTransaction(signature);
-
-      setProcessingMint({ step: 4, message: 'Transferring NFT...' });
-      const metaplex = Metaplex.make(connection).use(walletAdapterIdentity(solana));
-      await metaplex.nfts().transfer({
-        nftOrSft: { mintAddress: new PublicKey(nft.mint) },
-        toOwner: toPublicKey,
-      });
-
-      setProcessingMint({ step: 5, message: 'Updating database...' });
-      await axios.patch('/api/nfts', { mint: nft.mint, owner: walletString, for_sale: false });
-
-      setPublicNFTs((prev) =>
-        prev.map((n) => (n.mint === nft.mint ? { ...n, owner: walletString, for_sale: false, price: 0 } : n))
-      );
-      setUserNFTs((prev) => [...prev, { ...nft, owner: walletString, for_sale: false, price: 0 }]);
-
-      showNotification(`Successfully purchased ${nft.name}!`, 'success');
     } catch (err) {
       setError('Buying failed: ' + err.message);
       showNotification('Purchase failed: ' + err.message, 'error');
@@ -361,19 +362,12 @@ export default function AppPage() {
   };
 
   const fetchUserNFTs = async () => {
-    if (!wallet) return;
+    if (!wallet || !walletType) return;
 
     setLoading(true);
     setError(null);
     try {
-      const walletString = wallet instanceof PublicKey 
-        ? wallet.toString() 
-        : (wallet && typeof wallet.toString === 'function' ? wallet.toString() : null);
-      if (!walletString) {
-        throw new Error('Invalid wallet format');
-      }
-      console.log('Fetching user NFTs with wallet:', walletString);
-
+      const walletString = walletType === 'phantom' ? wallet.toString() : wallet;
       const { data } = await axios.get('/api/nfts');
       const ownedNFTs = Array.isArray(data)
         ? data.filter((nft) => nft.owner === walletString)
@@ -508,7 +502,9 @@ export default function AppPage() {
                     className="px-4 py-2 bg-white/10 border border-white/20 rounded-md text-sm font-medium hover:bg-white/20 transition-colors"
                     onClick={disconnectWallet}
                   >
-                    {wallet.toString().slice(0, 4)}...{wallet.toString().slice(-4)}
+                    {walletType === 'phantom'
+                      ? `${wallet.toString().slice(0, 4)}...${wallet.toString().slice(-4)} (Phantom)`
+                      : `${wallet.slice(0, 4)}...${wallet.slice(-4)} (Coinbase)`}
                   </motion.button>
                 </div>
               )}
@@ -657,18 +653,28 @@ export default function AppPage() {
                 >
                   <h2 className="text-xl font-bold mb-4">Connect Your Wallet</h2>
                   <p className="text-gray-400 mb-6">
-                    Connect your Solana wallet to mint and trade NFTs on our platform.
+                    Connect a wallet to mint and trade NFTs on our platform.
                   </p>
                   <div className="space-y-4">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       className="w-full px-4 py-3 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors flex items-center justify-center space-x-2"
-                      onClick={connectWallet}
+                      onClick={connectPhantomWallet}
                       disabled={loading}
                     >
                       <img src="/phantom.png" alt="Phantom" className="w-6 h-6" />
                       <span>{loading ? 'Connecting...' : 'Connect Phantom'}</span>
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full px-4 py-3 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors flex items-center justify-center space-x-2"
+                      onClick={connectCoinbaseWallet}
+                      disabled={loading}
+                    >
+                      <img src="/coinbase.png" alt="Coinbase" className="w-6 h-6" /> {/* Add Coinbase logo */}
+                      <span>{loading ? 'Connecting...' : 'Connect Coinbase'}</span>
                     </motion.button>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
@@ -741,46 +747,42 @@ export default function AppPage() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                      {publicNFTs
-                        .filter((nft) =>
-                          nft.name?.toLowerCase().includes(searchQuery.toLowerCase()) || false
-                        )
-                        .map((nft) => (
-                          <motion.div
-                            key={nft.mint}
-                            className="vercel-card relative"
-                            whileHover={{ y: -5 }}
-                          >
-                            <div className="h-1 bg-vercel-pink w-full absolute top-0 left-0 rounded-t-lg"></div>
-                            <div className="p-6">
-                              <div className="flex justify-between items-start mb-4">
-                                <h3 className="text-lg font-bold">{nft.name}</h3>
-                                <div className="flex items-center text-yellow-400">
-                                  <span className="mr-1">★</span>
-                                  <span>{nft.stars || 0}</span>
-                                </div>
+                      {filteredPublicNFTs.map((nft) => (
+                        <motion.div
+                          key={nft.mint}
+                          className="vercel-card relative"
+                          whileHover={{ y: -5 }}
+                        >
+                          <div className="h-1 bg-vercel-pink w-full absolute top-0 left-0 rounded-t-lg"></div>
+                          <div className="p-6">
+                            <div className="flex justify-between items-start mb-4">
+                              <h3 className="text-lg font-bold">{nft.name}</h3>
+                              <div className="flex items-center text-yellow-400">
+                                <span className="mr-1">★</span>
+                                <span>{nft.stars || 0}</span>
                               </div>
-                              <p className="text-gray-400 text-sm mb-4 line-clamp-2">
-                                {nft.description || 'No description available'}
-                              </p>
-                              <div className="flex justify-between items-center mb-4">
-                                <span className="text-sm text-gray-400">
-                                  Owner: {nft.owner?.slice(0, 6)}...
-                                </span>
-                                <span className="text-vercel-pink font-bold">{nft.price} SOL</span>
-                              </div>
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className="w-full px-4 py-2 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors"
-                                onClick={() => buyNFT(nft)}
-                                disabled={!wallet || loading}
-                              >
-                                {loading === nft.mint ? 'Processing...' : 'Buy Now'}
-                              </motion.button>
                             </div>
-                          </motion.div>
-                        ))}
+                            <p className="text-gray-400 text-sm mb-4 line-clamp-2">
+                              {nft.description || 'No description available'}
+                            </p>
+                            <div className="flex justify-between items-center mb-4">
+                              <span className="text-sm text-gray-400">
+                                Owner: {nft.owner?.slice(0, 6)}...
+                              </span>
+                              <span className="text-vercel-pink font-bold">{nft.price} SOL</span>
+                            </div>
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              className="w-full px-4 py-2 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors"
+                              onClick={() => buyNFT(nft)}
+                              disabled={!wallet || loading}
+                            >
+                              {loading === nft.mint ? 'Processing...' : 'Buy Now'}
+                            </motion.button>
+                          </div>
+                        </motion.div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -850,7 +852,6 @@ export default function AppPage() {
                             <p className="text-gray-400 text-sm mb-4 line-clamp-2">
                               {nft.description || 'No description available'}
                             </p>
-                            
                             {nft.for_sale ? (
                               <div className="mb-4">
                                 <div className="flex justify-between items-center mb-2">
@@ -1046,4 +1047,4 @@ export default function AppPage() {
       </div>
     </motion.div>
   );
-} 
+}
