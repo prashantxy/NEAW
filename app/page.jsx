@@ -6,12 +6,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { initSmartProfile, getProfile } from '@/components/ui/lib/plurality';
+import CoinbaseWalletSDK from '@coinbase/wallet-sdk';
+import { ethers } from 'ethers';
 
 export default function LandingPage() {
   const router = useRouter();
   const [isLoaded, setIsLoaded] = useState(false);
   const [hoveredCard, setHoveredCard] = useState(null);
-  const [wallet, setWallet] = useState(null);
+  const [wallet, setWallet] = useState(null); // PublicKey (Solana) or string (Ethereum)
+  const [walletType, setWalletType] = useState(null); // 'phantom' or 'coinbase'
   const [profile, setProfile] = useState(null);
   const [trendingRepos, setTrendingRepos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -19,13 +22,13 @@ export default function LandingPage() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [animationStyles, setAnimationStyles] = useState([]);
   const [hoverButton, setHoverButton] = useState(false);
+  const [showWalletModal, setShowWalletModal] = useState(false);
 
   useEffect(() => {
     setIsLoaded(true);
     fetchTrendingRepos();
     checkWalletConnection();
 
-    // Generate animation styles on client-side only
     const styles = Array.from({ length: 20 }).map(() => ({
       top: `${Math.random() * 100}%`,
       left: `${Math.random() * 100}%`,
@@ -53,14 +56,16 @@ export default function LandingPage() {
         const resp = await solana.connect({ onlyIfTrusted: true });
         const walletAddr = resp.publicKey.toString();
         setWallet(resp.publicKey);
+        setWalletType('phantom');
         await loadProfile(walletAddr);
       } catch (e) {
-        console.log('No previous wallet connection found');
+        console.log('No previous Phantom connection found');
       }
     }
+    // Note: Coinbase Wallet doesn’t support auto-connect like Phantom; requires user interaction
   };
 
-  const connectWallet = async () => {
+  const connectPhantomWallet = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -70,10 +75,46 @@ export default function LandingPage() {
       if (!response.publicKey) throw new Error('No public key received');
       const walletAddr = response.publicKey.toString();
       setWallet(response.publicKey);
+      setWalletType('phantom');
       await loadProfile(walletAddr);
+      setShowWalletModal(false);
       router.push('/app');
     } catch (err) {
-      setError('Wallet connection failed: ' + err.message);
+      setError('Phantom connection failed: ' + err.message);
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const connectCoinbaseWallet = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const coinbaseWallet = new CoinbaseWalletSDK({
+        appName: 'NEAW',
+        appLogoUrl: '', // Optional
+        darkMode: false,
+      });
+
+      const provider = coinbaseWallet.makeWeb3Provider();
+      const ethersProvider = new ethers.BrowserProvider(provider);
+
+      const accounts = await provider.request({ method: 'eth_requestAccounts' });
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No accounts returned by Coinbase Wallet');
+      }
+
+      const signer = await ethersProvider.getSigner();
+      const walletAddr = await signer.getAddress();
+
+      setWallet(walletAddr);
+      setWalletType('coinbase');
+      await loadProfile(walletAddr);
+      setShowWalletModal(false);
+      router.push('/app');
+    } catch (err) {
+      setError('Coinbase connection failed: ' + err.message);
       console.error(err);
     } finally {
       setLoading(false);
@@ -194,8 +235,8 @@ export default function LandingPage() {
           <div className="relative">
             {!wallet ? (
               <motion.button 
-                className="px-4 py-2 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors"
-                onClick={connectWallet}
+                className="px-4 py-2 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors relative"
+                onClick={() => setShowWalletModal(true)}
                 disabled={loading}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -220,7 +261,9 @@ export default function LandingPage() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  {profile ? `${profile.connectedPlatforms?.github?.username || 'Profile'} (${wallet.toString().slice(0, 4)}...)` : 'Loading...'}
+                  {profile 
+                    ? `${profile.connectedPlatforms?.github?.username || 'Profile'} (${walletType === 'phantom' ? wallet.toString().slice(0, 4) : wallet.slice(0, 4)}...)`
+                    : 'Loading...'}
                 </motion.button>
                 <AnimatePresence>
                   {isProfileOpen && (
@@ -232,7 +275,9 @@ export default function LandingPage() {
                     >
                       <h3 className="text-lg font-bold mb-2">Smart Profile</h3>
                       <p className="text-sm text-gray-400">
-                        <strong>Wallet:</strong> {wallet.toString().slice(0, 6)}...{wallet.toString().slice(-4)}
+                        <strong>Wallet:</strong> {walletType === 'phantom' 
+                          ? `${wallet.toString().slice(0, 6)}...${wallet.toString().slice(-4)} (Phantom)`
+                          : `${wallet.slice(0, 6)}...${wallet.slice(-4)} (Coinbase)`}
                       </p>
                       {profile?.connectedPlatforms?.github?.username && (
                         <p className="text-sm text-gray-400">
@@ -258,6 +303,61 @@ export default function LandingPage() {
           </div>
         </motion.nav>
 
+        <AnimatePresence>
+          {showWalletModal && (
+            <motion.div
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowWalletModal(false)}
+            >
+              <motion.div
+                className="vercel-card p-6 max-w-md w-full mx-4"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h2 className="text-xl font-bold mb-4">Connect Your Wallet</h2>
+                <p className="text-gray-400 mb-6">
+                  Choose a wallet to connect and start minting NFTs.
+                </p>
+                <div className="space-y-4">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full px-4 py-3 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors flex items-center justify-center space-x-2"
+                    onClick={connectPhantomWallet}
+                    disabled={loading}
+                  >
+                    <img src="/phantom.png" alt="Phantom" className="w-6 h-6" />
+                    <span>{loading ? 'Connecting...' : 'Connect Phantom'}</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full px-4 py-3 bg-white text-black rounded-md font-medium text-sm hover:bg-white/90 transition-colors flex items-center justify-center space-x-2"
+                    onClick={connectCoinbaseWallet}
+                    disabled={loading}
+                  >
+                    <img src="/coinbase.png" alt="Coinbase" className="w-6 h-6" /> {/* Add Coinbase logo */}
+                    <span>{loading ? 'Connecting...' : 'Connect Coinbase'}</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full px-4 py-3 bg-transparent border border-white/20 rounded-md text-sm font-medium hover:bg-white/10 transition-colors"
+                    onClick={() => setShowWalletModal(false)}
+                  >
+                    Cancel
+                  </motion.button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="flex flex-col md:flex-row justify-between items-center py-16 px-8 md:px-16 gap-8">
           <motion.div 
             className="md:w-1/2"
@@ -269,7 +369,7 @@ export default function LandingPage() {
               Turn Code Into <span className="text-vercel-pink">Digital Assets</span>
             </h1>
             <p className="text-xl text-gray-400 mb-8">
-              Mint your GitHub repositories as NFTs on Solana. Own, trade, and monetize your code in the most innovative marketplace for developers.
+              Mint your GitHub repositories as NFTs on Solana or Ethereum. Own, trade, and monetize your code in the most innovative marketplace for developers.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <motion.button
@@ -511,7 +611,7 @@ export default function LandingPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
               {[
-                { id: 1, title: "Connect", description: "Connect your GitHub account and Solana wallet", icon: "🔗" },
+                { id: 1, title: "Connect", description: "Connect your GitHub account and wallet", icon: "🔗" },
                 { id: 2, title: "Select & Mint", description: "Choose a repository and mint it as an NFT", icon: "🔨" },
                 { id: 3, title: "List & Earn", description: "List your NFT on the marketplace and earn from sales", icon: "💸" }
               ].map((step, index) => (
@@ -615,7 +715,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-lg font-bold">NEAW</h3>
               </div>
-              <p className="text-gray-400 text-sm">The future of code ownership and monetization on Solana.</p>
+              <p className="text-gray-400 text-sm">The future of code ownership and monetization.</p>
               <div className="flex space-x-4 mt-4">
                 <a href="#" className="text-gray-400 hover:text-white transition-colors">
                   <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">

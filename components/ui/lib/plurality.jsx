@@ -17,7 +17,7 @@ export function WalletButton({ onConnect }) {
 
     try {
      
-      const APP_NAME = 'N';
+      const APP_NAME = 'NEAW';
       const APP_LOGO_URL = ''; // Optional
 
       // Initialize Coinbase Wallet SDK
